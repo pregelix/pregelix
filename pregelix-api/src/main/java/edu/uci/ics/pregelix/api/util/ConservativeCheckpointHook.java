@@ -17,15 +17,19 @@ package edu.uci.ics.pregelix.api.util;
 import edu.uci.ics.pregelix.api.job.ICheckpointHook;
 
 /**
- * The default checkpoint hook which never does checkpointing.
+ * A conservative checkpoint hook which does checkpoint every 5 supersteps
  * 
  * @author yingyib
  */
-public class DefaultCheckpointHook implements ICheckpointHook {
+public class ConservativeCheckpointHook implements ICheckpointHook {
 
     @Override
     public boolean checkpoint(int superstep) {
-        return false;
+        if (superstep % 5 == 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }
