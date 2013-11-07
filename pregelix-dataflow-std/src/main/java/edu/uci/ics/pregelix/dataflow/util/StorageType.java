@@ -12,16 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.uci.ics.pregelix.dataflow.std.base;
 
-import java.io.Serializable;
+package edu.uci.ics.pregelix.dataflow.util;
 
-import org.apache.hadoop.conf.Configuration;
-
-import edu.uci.ics.hyracks.api.dataflow.value.ISerializerDeserializer;
-
-public interface ISerializerDeserializerFactory<T> extends Serializable {
-
-    public ISerializerDeserializer<T> getSerializerDeserializer(Configuration conf);
-
+public enum StorageType {
+    TreeIndex,
+    LSMIndex
 }
