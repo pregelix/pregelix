@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,14 +30,13 @@ import edu.uci.ics.pregelix.example.utils.SerDeUtils;
 /**
  * A WritableComparable for longs in a variable-length format. Such values take
  * between one and nine bytes. Smaller values take fewer bytes.
- * 
+ *
  * @see org.apache.hadoop.io.WritableUtils#readVLong(DataInput)
  */
 @SuppressWarnings("rawtypes")
-public class VLongWritable extends org.apache.hadoop.io.VLongWritable implements WritableComparable, WritableSizable,
-        Pointable {
+public class VLongWritable extends org.apache.hadoop.io.VLongWritable implements WritableSizable, Pointable {
 
-    private byte[] data = new byte[10];
+    private final byte[] data = new byte[10];
     private int numBytes = -1;
 
     public VLongWritable() {
@@ -54,6 +53,7 @@ public class VLongWritable extends org.apache.hadoop.io.VLongWritable implements
         reset();
     }
 
+    @Override
     public int sizeInBytes() {
         return numBytes;
     }
@@ -158,6 +158,7 @@ public class VLongWritable extends org.apache.hadoop.io.VLongWritable implements
             super(VLongWritable.class);
         }
 
+        @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
             try {
                 long thisValue = SerDeUtils.readVLong(b1, s1, l1);
@@ -171,10 +172,12 @@ public class VLongWritable extends org.apache.hadoop.io.VLongWritable implements
 
     /** A decreasing Comparator optimized for LongWritable. */
     public static class DecreasingComparator extends Comparator {
+        @Override
         public int compare(WritableComparable a, WritableComparable b) {
             return -super.compare(a, b);
         }
 
+        @Override
         public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
             return -super.compare(b1, s1, l1, b2, s2, l2);
         }

@@ -683,44 +683,51 @@ public abstract class JobGen implements IJobGen {
 
     /** generate plan specific state checkpointing */
     protected JobSpecification[] generateStateCheckpointing(int lastSuccessfulIteration) throws HyracksException {
-        Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
-        JobSpecification spec = new JobSpecification(frameSize);
+        try {
+            Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
+            JobSpecification spec = new JobSpecification(frameSize);
 
-        /**
-         * source aggregate
-         */
-        RecordDescriptor rdFinal = DataflowUtils.getRecordDescriptorFromKeyValueClasses(conf, vertexIdClass.getName(),
-                MsgList.class.getName());
+            /**
+             * source aggregate
+             */
+            RecordDescriptor rdFinal = DataflowUtils.getRecordDescriptorFromKeyValueClasses(conf,
+                    vertexIdClass.getName(), MsgList.class.getName());
 
-        /**
-         * construct empty tuple operator
-         */
-        EmptyTupleSourceOperatorDescriptor emptyTupleSource = new EmptyTupleSourceOperatorDescriptor(spec);
-        setLocationConstraint(spec, emptyTupleSource);
+            /**
+             * construct empty tuple operator
+             */
+            EmptyTupleSourceOperatorDescriptor emptyTupleSource = new EmptyTupleSourceOperatorDescriptor(spec);
+            setLocationConstraint(spec, emptyTupleSource);
 
-        /**
-         * construct the materializing write operator
-         */
-        MaterializingReadOperatorDescriptor materializeRead = new MaterializingReadOperatorDescriptor(spec, rdFinal,
-                false, jobId, lastSuccessfulIteration + 1);
-        setLocationConstraint(spec, materializeRead);
+            /**
+             * construct the materializing write operator
+             */
+            MaterializingReadOperatorDescriptor materializeRead = new MaterializingReadOperatorDescriptor(spec,
+                    rdFinal, false, jobId, lastSuccessfulIteration + 1);
+            setLocationConstraint(spec, materializeRead);
 
-        String checkpointPath = BspUtils.getMessageCheckpointPath(conf, lastSuccessfulIteration);;
-        PregelixJob tmpJob = createCloneJob("State checkpointing for job " + jobId, pregelixJob);
-        tmpJob.setOutputFormatClass(SequenceFileOutputFormat.class);
-        FileOutputFormat.setOutputPath(tmpJob, new Path(checkpointPath));
-        tmpJob.setOutputKeyClass(vertexIdClass);
-        tmpJob.setOutputValueClass(MsgList.class);
+            String checkpointPath = BspUtils.getMessageCheckpointPath(conf, lastSuccessfulIteration);;
+            PregelixJob tmpJob = createCloneJob("State checkpointing for job " + jobId, pregelixJob);
+            tmpJob.setOutputFormatClass(SequenceFileOutputFormat.class);
+            FileOutputFormat.setOutputPath(tmpJob, new Path(checkpointPath));
+            tmpJob.setOutputKeyClass(vertexIdClass);
+            tmpJob.setOutputValueClass(MsgList.class);
 
-        IRecordDescriptorFactory inputRdFactory = DataflowUtils.getWritableRecordDescriptorFactoryFromWritableClasses(
-                new ConfigurationFactory(tmpJob.getConfiguration()), vertexIdClass.getName(), MsgList.class.getName());
-        HDFSFileWriteOperatorDescriptor hdfsWriter = new HDFSFileWriteOperatorDescriptor(spec, tmpJob, inputRdFactory);
-        setLocationConstraint(spec, hdfsWriter);
+            IRecordDescriptorFactory inputRdFactory = DataflowUtils
+                    .getWritableRecordDescriptorFactoryFromWritableClasses(
+                            new ConfigurationFactory(tmpJob.getConfiguration()), vertexIdClass.getName(),
+                            MsgList.class.getName());
+            HDFSFileWriteOperatorDescriptor hdfsWriter = new HDFSFileWriteOperatorDescriptor(spec, tmpJob,
+                    inputRdFactory);
+            setLocationConstraint(spec, hdfsWriter);
 
-        spec.connect(new OneToOneConnectorDescriptor(spec), emptyTupleSource, 0, materializeRead, 0);
-        spec.connect(new OneToOneConnectorDescriptor(spec), materializeRead, 0, hdfsWriter, 0);
-        spec.setFrameSize(frameSize);
-        return new JobSpecification[] { spec };
+            spec.connect(new OneToOneConnectorDescriptor(spec), emptyTupleSource, 0, materializeRead, 0);
+            spec.connect(new OneToOneConnectorDescriptor(spec), materializeRead, 0, hdfsWriter, 0);
+            spec.setFrameSize(frameSize);
+            return new JobSpecification[] { spec };
+        } catch (Exception e) {
+            throw new HyracksException(e);
+        }
     }
 
     /** load plan specific state checkpoints */
