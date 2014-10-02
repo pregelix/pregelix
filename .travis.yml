@@ -1,0 +1,28 @@
+language: java
+# whitelist
+branches:
+  only:
+    - master
+    - stable
+
+jdk:
+  - oraclejdk8
+  - oraclejdk7
+  - openjdk7
+
+# Use this to prepare the system to install prerequisites or dependencies
+#  - sudo apt-get update
+#before_install: 
+
+# Use this to install any prerequisites or dependencies necessary to run your build
+install:
+  - mvn install -DskipTests=true
+
+# Use this to prepare your build for testing
+# e.g. copy database configurations, environment variables, etc.
+#before_script:
+
+script:
+  - mvn test
+
+
