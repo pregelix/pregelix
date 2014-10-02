@@ -6,3 +6,9 @@ target
 .idea
 *.iml
 
+ClusterControllerService
+actual
+build
+edu.uci.ics.hyracks.control.nc.NodeControllerService
+expected
+teststore*
