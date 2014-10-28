@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -71,8 +71,8 @@ public class HDFSFileWriteOperatorDescriptor extends AbstractSingleActivityOpera
             private Job job;
             private RecordWriter recordWriter;
             private TaskAttemptContext context;
-            private ContextFactory ctxFactory = new ContextFactory();
-            private String TEMP_DIR = "_temporary";
+            private final ContextFactory ctxFactory = new ContextFactory();
+            private final String TEMP_DIR = "_temporary";
             private ClassLoader ctxCL;
 
             @Override
@@ -146,9 +146,8 @@ public class HDFSFileWriteOperatorDescriptor extends AbstractSingleActivityOpera
                         /**
                          * for Hadoop-0.23.1
                          */
-                        int jobId = job.getJobID().getId();
                         outputPath = new Path(outputPath.toString() + File.separator + TEMP_DIR + File.separator
-                                + jobId);
+                                + context.getJobID().getId());
                         results = findPartitionPaths(outputPath, dfs);
                         renameFile(dfs, filePath, results);
                     }
@@ -181,8 +180,9 @@ public class HDFSFileWriteOperatorDescriptor extends AbstractSingleActivityOpera
             private void renameFile(FileSystem dfs, Path filePath, FileStatus[] results) throws IOException,
                     HyracksDataException, FileNotFoundException {
                 Path srcDir = results[0].getPath();
-                if (!dfs.exists(srcDir))
+                if (!dfs.exists(srcDir)) {
                     throw new HyracksDataException("file " + srcDir.toString() + " does not exist!");
+                }
 
                 FileStatus[] srcFiles = dfs.listStatus(srcDir);
                 Path srcFile = srcFiles[0].getPath();

@@ -21,12 +21,17 @@
 
 <property>
    <name>dfs.replication</name>
-   <value>1</value>
+   <value>3</value>
 </property>
 
 <property>
 	<name>dfs.block.size</name>
 	<value>65536</value>
+</property>
+
+<property>
+    <name>dfs.namenode.fs-limits.min-block-size</name>
+    <value>65536</value>
 </property>
 
 </configuration>

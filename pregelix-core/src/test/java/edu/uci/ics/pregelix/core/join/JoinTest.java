@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,6 +64,7 @@ import edu.uci.ics.pregelix.core.data.TypeTraits;
 import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
 import edu.uci.ics.pregelix.core.util.TestUtils;
+import edu.uci.ics.pregelix.dataflow.EmptySinkOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.VertexWriteOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.std.IndexNestedLoopJoinOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.std.ProjectOperatorDescriptor;
@@ -84,14 +85,14 @@ public class JoinTest {
     private static final String PATH_TO_CLUSTER_PROPERTIES = "src/test/resources/cluster/cluster.properties";
 
     private static final float DEFAULT_BTREE_FILL_FACTOR = 1.00f;
-    private IIndexLifecycleManagerProvider lcManagerProvider = IndexLifeCycleManagerProvider.INSTANCE;
-    private IStorageManagerInterface storageManagerInterface = StorageManagerInterface.INSTANCE;
+    private final IIndexLifecycleManagerProvider lcManagerProvider = IndexLifeCycleManagerProvider.INSTANCE;
+    private final IStorageManagerInterface storageManagerInterface = StorageManagerInterface.INSTANCE;
 
-    private IBinaryHashFunctionFactory stringHashFactory = new PointableBinaryHashFunctionFactory(
+    private final IBinaryHashFunctionFactory stringHashFactory = new PointableBinaryHashFunctionFactory(
             UTF8StringPointable.FACTORY);
-    private IBinaryComparatorFactory stringComparatorFactory = new PointableBinaryComparatorFactory(
+    private final IBinaryComparatorFactory stringComparatorFactory = new PointableBinaryComparatorFactory(
             UTF8StringPointable.FACTORY);
-    private INormalizedKeyComputerFactory nmkFactory = new UTF8StringNormalizedKeyComputerFactory();
+    private final INormalizedKeyComputerFactory nmkFactory = new UTF8StringNormalizedKeyComputerFactory();
 
     private void cleanupStores() throws IOException {
         FileUtils.forceMkdir(new File("teststore"));
@@ -233,8 +234,9 @@ public class JoinTest {
         comparatorFactories[0] = stringComparatorFactory;
         IFileSplitProvider fileSplitProvider = ClusterConfig.getFileSplitProvider(JOB_NAME, JOB_NAME);
         ITypeTraits[] typeTraits = new ITypeTraits[custDesc.getFields().length];
-        for (int i = 0; i < typeTraits.length; i++)
+        for (int i = 0; i < typeTraits.length; i++) {
             typeTraits[i] = new TypeTraits(false);
+        }
         TreeIndexCreateOperatorDescriptor writer = new TreeIndexCreateOperatorDescriptor(spec, storageManagerInterface,
                 lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories, null,
                 new BTreeDataflowHelperFactory(), new TransientLocalResourceFactoryProvider(),
@@ -275,23 +277,28 @@ public class JoinTest {
 
         IFileSplitProvider fileSplitProvider = ClusterConfig.getFileSplitProvider(JOB_NAME, JOB_NAME);
         int[] fieldPermutation = new int[custDesc.getFields().length];
-        for (int i = 0; i < fieldPermutation.length; i++)
+        for (int i = 0; i < fieldPermutation.length; i++) {
             fieldPermutation[i] = i;
+        }
         ITypeTraits[] typeTraits = new ITypeTraits[custDesc.getFields().length];
-        for (int i = 0; i < typeTraits.length; i++)
+        for (int i = 0; i < typeTraits.length; i++) {
             typeTraits[i] = new TypeTraits(false);
-        TreeIndexBulkLoadOperatorDescriptor writer = new TreeIndexBulkLoadOperatorDescriptor(spec,
+        }
+        TreeIndexBulkLoadOperatorDescriptor writer = new TreeIndexBulkLoadOperatorDescriptor(spec, custDesc,
                 storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories, null,
-                fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, false, 100000, false, new BTreeDataflowHelperFactory(),
-                NoOpOperationCallbackFactory.INSTANCE);
+                fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, false, 100000, false, new BTreeDataflowHelperFactory());
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, NC1_ID, NC2_ID);
+
+        EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, sink, NC1_ID, NC2_ID);
 
         spec.connect(new OneToOneConnectorDescriptor(spec), custScanner, 0, sorter, 0);
         spec.connect(new MToNPartitioningMergingConnectorDescriptor(spec, new FieldHashPartitionComputerFactory(
                 sortFields, new IBinaryHashFunctionFactory[] { stringHashFactory }), sortFields, comparatorFactories,
                 nmkFactory), sorter, 0, writer, 0);
+        spec.connect(new OneToOneConnectorDescriptor(spec), writer, 0, sink, 0);
 
-        spec.addRoot(writer);
+        spec.addRoot(sink);
         runTest(spec);
     }
 
@@ -353,8 +360,9 @@ public class JoinTest {
         keyComparatorFactories[0] = stringComparatorFactory;
         IFileSplitProvider fileSplitProvider = ClusterConfig.getFileSplitProvider(JOB_NAME, JOB_NAME);
         ITypeTraits[] typeTraits = new ITypeTraits[custDesc.getFields().length];
-        for (int i = 0; i < typeTraits.length; i++)
+        for (int i = 0; i < typeTraits.length; i++) {
             typeTraits[i] = new TypeTraits(false);
+        }
         IndexNestedLoopJoinOperatorDescriptor join = new IndexNestedLoopJoinOperatorDescriptor(spec, custOrderJoinDesc,
                 storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, keyComparatorFactories,
                 true, keyFields, keyFields, true, true, new BTreeDataflowHelperFactory());
@@ -553,8 +561,9 @@ public class JoinTest {
         keyComparatorFactories[0] = stringComparatorFactory;
         IFileSplitProvider fileSplitProvider = ClusterConfig.getFileSplitProvider(JOB_NAME, JOB_NAME);
         ITypeTraits[] typeTraits = new ITypeTraits[custDesc.getFields().length];
-        for (int i = 0; i < typeTraits.length; i++)
+        for (int i = 0; i < typeTraits.length; i++) {
             typeTraits[i] = new TypeTraits(false);
+        }
         ITreeIndexFrameFactory interiorFrameFactory = new BTreeNSMInteriorFrameFactory(new TypeAwareTupleWriterFactory(
                 typeTraits));
         ITreeIndexFrameFactory leafFrameFactory = new BTreeNSMLeafFrameFactory(new TypeAwareTupleWriterFactory(

@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>edu.uci.ics.hyracks</groupId>
   <artifactId>pregelix</artifactId>
-  <version>0.2.13-SNAPSHOT</version>
+  <version>0.2.14-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>pregelix</name>
 
@@ -25,14 +25,19 @@
     <hanging.pregelix.tests>**/pregelix/**/FailureRecovery*.java</hanging.pregelix.tests>
     <global.test.includes>**/*TestSuite.java,**/*Test.java</global.test.includes>
     <global.test.excludes>**/Abstract*.java,${hanging.pregelix.tests},${hivesterix.perf.tests}</global.test.excludes>
-  </properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
+    <hyracks.version>0.2.13</hyracks.version>
+    <pregelix.version>0.2.14-SNAPSHOT</pregelix.version>
+    <junit.version>4.8.1</junit.version>
+    <commons.io.version>2.4</commons.io.version>
+ </properties>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
-        <version>4.8.1</version>
+        <version>${junit.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -106,6 +111,10 @@
     <repository>
       <id>maven-central</id>
       <url>http://repo1.maven.org/maven2/</url>
+    </repository>
+    <repository>
+      <id>maven-repo</id>
+      <url>http://mvnrepository.com/artifact/</url>
     </repository>
     <repository>
       <id>hyracks-public</id>
