@@ -5,7 +5,7 @@
 <property><name>mapred.jobtracker.instrumentation</name><value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value></property>
 <property><name>mapred.skip.reduce.auto.incr.proc.count</name><value>true</value></property>
 <property><name>fs.hsftp.impl</name><value>org.apache.hadoop.hdfs.HsftpFileSystem</value></property>
-<property><name>mapred.input.dir</name><value>asterix://nc1data/Pregelix/Nodes_idx_Nodes</value></property>
+<property><name>mapred.input.dir</name><value>asterix://nc1/tmp/nc1data/Pregelix/Nodes_idx_Nodes/,asterix://nc2/tmp/nc2data/Pregelix/Nodes_idx_Nodes/</value></property>
 <property><name>mapred.submit.replication</name><value>10</value></property>
 <property><name>ipc.server.tcpnodelay</name><value>false</value></property>
 <property><name>fs.checkpoint.dir</name><value>${hadoop.tmp.dir}/dfs/namesecondary</value></property>

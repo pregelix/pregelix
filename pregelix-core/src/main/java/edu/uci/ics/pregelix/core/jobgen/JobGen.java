@@ -623,9 +623,7 @@ public abstract class JobGen implements IJobGen {
 
     @SuppressWarnings("rawtypes")
 	private JobSpecification loadAsterixData(PregelixJob job) throws HyracksException, HyracksDataException {
-    	
-    	String nameOfIndex = "/tmp/nc1/iodevice0/nc1data/Pregelix/Nodes_idx_Nodes2/";
-    	
+
     	JobSpecification spec = new JobSpecification(frameSize); //32768
     	
     	// load job configuration
@@ -636,15 +634,11 @@ public abstract class JobGen implements IJobGen {
         Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
         Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
 
-        // load Pregelix IFileSplitProvider
+        // load Pregelix file splits
         IFileSplitProvider fileSplitProvider = getFileSplitProvider(jobId, PRIMARY_INDEX);
-
-        // load IFileSplitProvider for the Asterix import -> @TODO
-        //IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(ClusterConfig.getNCNames(), nameOfIndex);
-        IFileSplitProvider asterixFileSplitProvider = new ConstantFileSplitProvider(new FileSplit[]{
-        	new FileSplit("nc1", "/tmp/nc1data/Pregelix/Nodes_idx_Nodes/"),
-        	new FileSplit("nc2", "/tmp/nc2data/Pregelix/Nodes_idx_Nodes/")
-        });
+        
+        // load Asterix file splits
+        IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(FileInputFormat.getInputPaths(job));
 
         /*
          * Create Asterix Types
@@ -740,10 +734,16 @@ public abstract class JobGen implements IJobGen {
         typeTraits[1] = new TypeTraits(false);
 
         TreeIndexBulkLoadOperatorDescriptor btreeBulkLoad = new TreeIndexBulkLoadOperatorDescriptor(spec,
-                storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories,
+        		recordDescriptor, storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories,
                 sortFields, fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, true, BF_HINT, false,
-                getIndexDataflowHelperFactory(), NoOpOperationCallbackFactory.INSTANCE);
+                getIndexDataflowHelperFactory());
         setLocationConstraint(spec, btreeBulkLoad);
+        
+        /**
+        * construct empty sink operator
+        */
+        EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
+        setLocationConstraint(spec, sink);
 
         /**
          * connect operator descriptors
@@ -751,20 +751,27 @@ public abstract class JobGen implements IJobGen {
         spec.connect(new OneToOneConnectorDescriptor(spec), fakeStart, 0, btreeSearchOp, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), btreeSearchOp, 0, projection, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), projection, 0, formatTransformer, 0);
-        
         spec.connect(new OneToOneConnectorDescriptor(spec), formatTransformer, 0, btreeBulkLoad, 0);
+        spec.connect(new OneToOneConnectorDescriptor(spec), btreeBulkLoad, 0, sink, 0);
         spec.setFrameSize(32768);
         return spec;
     }
 
-    private IFileSplitProvider createFileSplitProviderForAsterix(String[] splitNCs, String btreeFileName) {
-        FileSplit[] fileSplits = new FileSplit[splitNCs.length];
-        for (int i = 0; i < splitNCs.length; ++i) {
-            //String fileName = btreeFileName + "." + splitNCs[i];
-            fileSplits[i] = new FileSplit(splitNCs[i], new FileReference(new File(btreeFileName)));
-        }
-        IFileSplitProvider splitProvider = new ConstantFileSplitProvider(fileSplits);
-        return splitProvider;
+    private IFileSplitProvider createFileSplitProviderForAsterix(Path[] inputs) {
+    	
+    	FileSplit[] splits = new FileSplit[inputs.length];
+    	
+    	int i = 0;
+    	for(Path p : inputs) {
+    		// make sure the path has a slash at the end
+    		String path = p.toUri().getPath();
+    		if(!path.endsWith("/")) {
+    			path += "/";
+    		}
+    		splits[i++] = new FileSplit(p.toUri().getHost(), path);
+    	}
+    	
+        return new ConstantFileSplitProvider(splits);
     }
     
     @SuppressWarnings({ "rawtypes" })
