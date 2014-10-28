@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,14 +64,14 @@ public class FinalAggregateOperatorDescriptor extends AbstractSingleActivityOper
     public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
             IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions) throws HyracksDataException {
         return new AbstractUnaryInputSinkOperatorNodePushable() {
-            private Configuration conf = confFactory.createConfiguration(ctx);
-            private List<GlobalAggregator> aggregators = BspUtils.createGlobalAggregators(conf);
-            private List<String> aggregateClassNames = Arrays.asList(BspUtils.getGlobalAggregatorClassNames(conf));
-            private FrameTupleAccessor accessor = new FrameTupleAccessor(ctx.getFrameSize(),
+            private final Configuration conf = confFactory.createConfiguration(ctx);
+            private final List<GlobalAggregator> aggregators = BspUtils.createGlobalAggregators(conf);
+            private final List<String> aggregateClassNames = Arrays.asList(BspUtils.getGlobalAggregatorClassNames(conf));
+            private final FrameTupleAccessor accessor = new FrameTupleAccessor(ctx.getFrameSize(),
                     inputRdFactory.createRecordDescriptor(ctx));
-            private ByteBufferInputStream inputStream = new ByteBufferInputStream();
-            private DataInput input = new DataInputStream(inputStream);
-            private List<Writable> partialAggregateValues = BspUtils.createFinalAggregateValues(conf);
+            private final ByteBufferInputStream inputStream = new ByteBufferInputStream();
+            private final DataInput input = new DataInputStream(inputStream);
+            private final List<Writable> partialAggregateValues = BspUtils.createFinalAggregateValues(conf);
 
             @Override
             public void open() throws HyracksDataException {
@@ -115,8 +115,9 @@ public class FinalAggregateOperatorDescriptor extends AbstractSingleActivityOper
                     FileSystem dfs = FileSystem.get(conf);
                     String spillingDir = BspUtils.getGlobalAggregateSpillingDirName(conf,
                             IterationUtils.getSuperstep(BspUtils.getJobId(conf), ctx));
-                    FileStatus[] files = dfs.listStatus(new Path(spillingDir));
-                    if (files != null) {
+                    Path spillPath = new Path(spillingDir);
+                    if (dfs.exists(spillPath)) {
+                        FileStatus[] files = dfs.listStatus(spillPath);
                         // goes into this branch only when there are spilled files
                         for (int i = 0; i < files.length; i++) {
                             FileStatus file = files[i];

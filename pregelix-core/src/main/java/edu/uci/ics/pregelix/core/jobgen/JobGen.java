@@ -575,10 +575,16 @@ public abstract class JobGen implements IJobGen {
         typeTraits[0] = new TypeTraits(false);
         typeTraits[1] = new TypeTraits(false);
         TreeIndexBulkLoadOperatorDescriptor btreeBulkLoad = new TreeIndexBulkLoadOperatorDescriptor(spec,
-                storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories,
-                sortFields, fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, true, BF_HINT, false,
-                getIndexDataflowHelperFactory(), NoOpOperationCallbackFactory.INSTANCE);
+                recordDescriptor, storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits,
+                comparatorFactories, sortFields, fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, true, BF_HINT, false,
+                getIndexDataflowHelperFactory());
         setLocationConstraint(spec, btreeBulkLoad);
+
+        /**
+         * construct empty sink operator
+         */
+        EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
+        setLocationConstraint(spec, sink);
 
         /**
          * connect operator descriptors
@@ -586,6 +592,7 @@ public abstract class JobGen implements IJobGen {
         ITuplePartitionComputerFactory hashPartitionComputerFactory = getVertexPartitionComputerFactory();
         spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory), scanner, 0, sorter, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), sorter, 0, btreeBulkLoad, 0);
+        spec.connect(new OneToOneConnectorDescriptor(spec), btreeBulkLoad, 0, sink, 0);
         spec.setFrameSize(frameSize);
         return spec;
     }
