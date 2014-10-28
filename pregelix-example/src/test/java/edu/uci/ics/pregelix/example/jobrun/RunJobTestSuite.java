@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 
+import edu.uci.ics.asterix.common.config.GlobalConfig;
 import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
 
@@ -46,9 +47,9 @@ public class RunJobTestSuite extends TestSuite {
     private static final String ACTUAL_RESULT_DIR = "actual";
     private static final String EXPECTED_RESULT_DIR = "src/test/resources/expected";
     private static final String PATH_TO_HADOOP_CONF = "src/test/resources/hadoop/conf";
-    private static final String PATH_TO_CLUSTER_STORE = "src/test/resources/cluster/stores.properties";
+    private static final String PATH_TO_CLUSTER_STORE = "src/test/resources/cluster/stores2.properties";
     private static final String PATH_TO_CLUSTER_PROPERTIES = "src/test/resources/cluster/cluster.properties";
-    private static final String PATH_TO_JOBS = "src/test/resources/jobs/";
+    private static final String PATH_TO_JOBS = "src/test/resources/jobs2/";
     private static final String PATH_TO_IGNORE = "src/test/resources/ignore.txt";
     private static final String PATH_TO_ONLY = "src/test/resources/only.txt";
 
@@ -66,18 +67,23 @@ public class RunJobTestSuite extends TestSuite {
 
     private static final String DATA_PATH5 = "data/clique3/clique.txt";
     private static final String HDFS_PATH5 = "/clique3/";
+    
+    private static final String TEST_CONFIG_FILE_NAME = "asterix-build-configuration.xml";
 
     private static final String HADOOP_CONF_PATH = ACTUAL_RESULT_DIR + File.separator + "conf.xml";
     private MiniDFSCluster dfsCluster;
 
     private JobConf conf = new JobConf();
-    private int numberOfNC = 2;
+    private int numberOfNC = 1;
 
     public void setUp() throws Exception {
         ClusterConfig.setStorePath(PATH_TO_CLUSTER_STORE);
         ClusterConfig.setClusterPropertiesPath(PATH_TO_CLUSTER_PROPERTIES);
         cleanupStores();
         PregelixHyracksIntegrationUtil.init();
+        
+        System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY, TEST_CONFIG_FILE_NAME);
+        
         LOGGER.info("Hyracks mini-cluster started");
         FileUtils.forceMkdir(new File(ACTUAL_RESULT_DIR));
         FileUtils.cleanDirectory(new File(ACTUAL_RESULT_DIR));
