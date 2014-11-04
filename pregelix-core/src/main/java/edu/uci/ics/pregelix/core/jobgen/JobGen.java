@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 
 import edu.uci.ics.asterix.common.exceptions.AsterixException;
+import edu.uci.ics.asterix.formats.nontagged.AqlBinaryComparatorFactoryProvider;
 import edu.uci.ics.asterix.formats.nontagged.AqlSerializerDeserializerProvider;
 import edu.uci.ics.asterix.om.types.ARecordType;
 import edu.uci.ics.asterix.om.types.AUnionType;
@@ -69,6 +70,7 @@ import edu.uci.ics.hyracks.api.io.FileReference;
 import edu.uci.ics.hyracks.api.job.JobSpecification;
 import edu.uci.ics.hyracks.data.std.accessors.PointableBinaryComparatorFactory;
 import edu.uci.ics.hyracks.data.std.primitive.IntegerPointable;
+import edu.uci.ics.hyracks.data.std.primitive.LongPointable;
 import edu.uci.ics.hyracks.dataflow.common.comm.io.ArrayTupleBuilder;
 import edu.uci.ics.hyracks.dataflow.common.data.marshalling.UTF8StringSerializerDeserializer;
 import edu.uci.ics.hyracks.dataflow.std.connectors.MToNPartitioningConnectorDescriptor;
@@ -118,6 +120,7 @@ import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.optimizer.IOptimizer;
 import edu.uci.ics.pregelix.core.util.DataflowUtils;
 import edu.uci.ics.pregelix.dataflow.AsterixInputTransformOperatorDescriptor;
+import edu.uci.ics.pregelix.dataflow.AsterixOutputTransformOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.ClearStateOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.EmptySinkOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.EmptyTupleSourceOperatorDescriptor;
@@ -415,7 +418,13 @@ public abstract class JobGen implements IJobGen {
     }
 
     public JobSpecification scanIndexWriteGraph() throws HyracksException {
-        JobSpecification spec = scanIndexWriteToHDFS(conf, false);
+
+        JobSpecification spec;
+        if (FileOutputFormat.getOutputPath(pregelixJob).toString().startsWith("asterix:/")) {
+            spec = scanIndexWriteToAsterix(conf, false);
+        } else {
+            spec = scanIndexWriteToHDFS(conf, false);
+        }
         return spec;
     }
 
@@ -641,14 +650,14 @@ public abstract class JobGen implements IJobGen {
         // load Asterix file splits
         IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(FileInputFormat
                 .getInputPaths(job));
-        
+
         // create array of NCs
         String[] locations = new String[FileInputFormat.getInputPaths(job).length];
         int i = 0;
         for (Path p : FileInputFormat.getInputPaths(job)) {
             locations[i++] = p.toUri().getHost();
         }
-        
+
         // Check if partitioning in Pregelix and Asterix is the same
         List<String> l1 = new ArrayList<String>(Arrays.asList(locations));
         List<String> l2 = new ArrayList<String>(Arrays.asList(ClusterConfig.getLocationConstraint()));
@@ -715,9 +724,8 @@ public abstract class JobGen implements IJobGen {
          */
         FakeMetaOperatorDescriptor fakeStart = new FakeMetaOperatorDescriptor(spec, recordDescriptorAsterix,
                 asterixFileSplitProvider);
-        
+
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, fakeStart, locations);
-        
 
         /*
          * Read from Asterix b-tree
@@ -728,19 +736,19 @@ public abstract class JobGen implements IJobGen {
                 null, NoOpOperationCallbackFactory.INSTANCE, null, null);
 
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, btreeSearchOp, locations);
-        
+
         /*
          * construct sort operator
          */
         int[] sortFields = new int[1];
         sortFields[0] = 0;
-        
+
         ExternalSortOperatorDescriptor sorter = null;
-        if(!samePartitioning) {
+        if (!samePartitioning) {
             INormalizedKeyComputerFactory nkmFactory = JobGenUtil.getINormalizedKeyComputerFactory(conf);
             comparatorFactories[0] = JobGenUtil.getIBinaryComparatorFactory(0, vertexIdClass);;
-            sorter = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields,
-                    nkmFactory, comparatorFactories, recordDescriptorAsterix);
+            sorter = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields, nkmFactory,
+                    comparatorFactories, recordDescriptorAsterix);
             setLocationConstraint(spec, sorter);
         }
 
@@ -788,12 +796,12 @@ public abstract class JobGen implements IJobGen {
          * connect operator descriptors
          */
         spec.connect(new OneToOneConnectorDescriptor(spec), fakeStart, 0, btreeSearchOp, 0);
-        if(!samePartitioning) {
+        if (!samePartitioning) {
             ITuplePartitionComputerFactory hashPartitionComputerFactory = getVertexPartitionComputerFactory();
-            spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory), btreeSearchOp, 0, sorter, 0);
+            spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory), btreeSearchOp, 0,
+                    sorter, 0);
             spec.connect(new OneToOneConnectorDescriptor(spec), sorter, 0, projection, 0);
-        }
-        else {
+        } else {
             spec.connect(new OneToOneConnectorDescriptor(spec), btreeSearchOp, 0, projection, 0);
         }
         spec.connect(new OneToOneConnectorDescriptor(spec), projection, 0, formatTransformer, 0);
@@ -893,6 +901,194 @@ public abstract class JobGen implements IJobGen {
         } else {
             spec.connect(new OneToOneConnectorDescriptor(spec), scanner, 0, writer, 0);
         }
+        spec.setFrameSize(frameSize);
+        return spec;
+    }
+
+    @SuppressWarnings({ "rawtypes" })
+    private JobSpecification scanIndexWriteToAsterix(Configuration conf, boolean ckpointing)
+            throws HyracksDataException, HyracksException {
+        Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
+        Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
+        JobSpecification spec = new JobSpecification(frameSize);
+
+        IConfigurationFactory confFactory = new ConfigurationFactory(conf);
+        RecordDescriptor recordDescriptor = DataflowUtils.getRecordDescriptorFromKeyValueClasses(conf,
+                vertexIdClass.getName(), vertexClass.getName());
+
+        // Construct paths and FileSplitProvider
+        String[] pathStrings = FileOutputFormat.getOutputPath(pregelixJob).toString().split(",");
+        Path[] paths = new Path[pathStrings.length];
+        int i = 0;
+        for (String p : pathStrings) {
+            paths[i++] = new Path(p);
+        }
+        IFileSplitProvider fileSplitProviderAsterix = createFileSplitProviderForAsterix(paths);
+
+        // create array of NCs
+        String[] locations = new String[paths.length];
+        i = 0;
+        for (Path p : paths) {
+            locations[i++] = p.toUri().getHost();
+        }
+
+        // Check if partitioning in Pregelix and Asterix is the same
+        List<String> l1 = new ArrayList<String>(Arrays.asList(locations));
+        List<String> l2 = new ArrayList<String>(Arrays.asList(ClusterConfig.getLocationConstraint()));
+
+        Collections.sort(l1);
+        Collections.sort(l2);
+
+        boolean samePartitioning = l1.equals(l2);
+
+        /*
+         * Fake Start. Used to Simulate the Asterix pipeline entry point and to add the given Asterix Index to the LocalResourceRepository
+         */
+        FakeMetaOperatorDescriptor emptyTupleSource = new FakeMetaOperatorDescriptor(spec, recordDescriptor,
+                fileSplitProviderAsterix);
+        setLocationConstraint(spec, emptyTupleSource);
+
+        /*
+         * construct btree search operator
+         */
+        IBinaryComparatorFactory[] comparatorFactories = new IBinaryComparatorFactory[1];
+        comparatorFactories[0] = JobGenUtil.getIBinaryComparatorFactory(0, vertexIdClass);;
+        IFileSplitProvider fileSplitProvider = getFileSplitProvider(jobId, PRIMARY_INDEX);
+
+        ITypeTraits[] typeTraits = new ITypeTraits[2];
+        typeTraits[0] = new TypeTraits(false);
+        typeTraits[1] = new TypeTraits(false);
+
+        BTreeSearchOperatorDescriptor scanner = new BTreeSearchOperatorDescriptor(spec, recordDescriptor,
+                storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories, null,
+                null, null, true, true, getIndexDataflowHelperFactory(), false, false, null,
+                NoOpOperationCallbackFactory.INSTANCE, null, null);
+        setLocationConstraint(spec, scanner);
+
+        ExternalSortOperatorDescriptor sort = null;
+        int[] sortFields = new int[] { 0 };
+        if (!ckpointing) {
+            INormalizedKeyComputerFactory nkmFactory = JobGenUtil.getFinalNormalizedKeyComputerFactory(conf);
+            IBinaryComparatorFactory[] sortCmpFactories = new IBinaryComparatorFactory[1];
+            sortCmpFactories[0] = JobGenUtil.getFinalBinaryComparatorFactory(vertexIdClass);
+            sort = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields, nkmFactory, sortCmpFactories,
+                    recordDescriptor);
+            setLocationConstraint(spec, scanner);
+        }
+
+        /*
+         * Create Asterix Types
+         */
+        ITypeTraits[] typeTraitsAsterix = new ITypeTraits[2];
+        typeTraitsAsterix[0] = new TypeTraits(9);
+        typeTraitsAsterix[1] = new TypeTraits(false);
+
+        IAType[] fieldTypesEdges = new IAType[2];
+        fieldTypesEdges[0] = BuiltinType.AINT64;
+        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+                "value");
+
+        IAType[] fieldTypesNodes = new IAType[3];
+        fieldTypesNodes[0] = BuiltinType.AINT64;
+        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+                "value");
+        try {
+            fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
+                    "value" }, fieldTypesEdges, true), "EdgeType");
+        } catch (AsterixException e) {
+            e.printStackTrace();
+        }
+
+        ARecordType nodeType = null;
+        try {
+            nodeType = new ARecordType("NodeType", new String[] { "id", "value", "edges" }, fieldTypesNodes, true);
+        } catch (AsterixException e) {
+            e.printStackTrace();
+        }
+
+        ISerializerDeserializer[] asterixFields = new ISerializerDeserializer[2];
+        asterixFields[0] = AqlSerializerDeserializerProvider.INSTANCE
+                .getNonTaggedSerializerDeserializer(BuiltinType.AINT64);
+        asterixFields[1] = AqlSerializerDeserializerProvider.INSTANCE.getNonTaggedSerializerDeserializer(nodeType);
+        RecordDescriptor recordDescriptorAsterix = new RecordDescriptor(asterixFields, typeTraitsAsterix);
+
+        IBinaryComparatorFactory[] comparatorFactoriesAsterix = new IBinaryComparatorFactory[1];
+        comparatorFactoriesAsterix[0] = PointableBinaryComparatorFactory.of(LongPointable.FACTORY);
+
+        int[] fieldPermut = new int[] { 0, 1 };
+
+        /*
+         * Transform Pregelix Writables to Asterix type
+         */
+
+        IRecordDescriptorFactory inputRdFactory = DataflowUtils.getWritableRecordDescriptorFactoryFromWritableClasses(
+                getConfigurationFactory(), vertexIdClass.getName(), vertexClass.getName());
+
+        AsterixOutputTransformOperatorDescriptor formatTransformer = new AsterixOutputTransformOperatorDescriptor(spec,
+                recordDescriptorAsterix, confFactory, inputRdFactory, nodeType);
+        setLocationConstraint(spec, formatTransformer);
+
+        ExternalSortOperatorDescriptor sorter = null;
+        if (!samePartitioning) {
+            INormalizedKeyComputerFactory nkmFactory = JobGenUtil.getINormalizedKeyComputerFactory(conf);
+            comparatorFactories[0] = AqlBinaryComparatorFactoryProvider.LONG_POINTABLE_INSTANCE;//JobGenUtil.getIBinaryComparatorFactory(0, vertexIdClass);;
+            sorter = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields, nkmFactory,
+                    comparatorFactories, recordDescriptorAsterix);
+            PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, sorter, locations);
+        }
+
+        /*
+         * Actual Write
+         */
+        IIndexDataflowHelperFactory asterixDataflowHelperFactory = new LSMBTreeDataflowHelperFactory(
+                new VirtualBufferCacheProvider(), new ConstantMergePolicyFactory(), MERGE_POLICY_PROPERTIES,
+                NoOpOperationTrackerProvider.INSTANCE, SynchronousSchedulerProvider.INSTANCE,
+                NoOpIOOperationCallback.INSTANCE, 0.01, true, typeTraitsAsterix, null, null, null);
+
+        TreeIndexBulkLoadOperatorDescriptor writer = new TreeIndexBulkLoadOperatorDescriptor(spec,
+                recordDescriptorAsterix, storageManagerInterface, lcManagerProvider, fileSplitProviderAsterix,
+                typeTraitsAsterix, comparatorFactoriesAsterix, sortFields, fieldPermut, DEFAULT_BTREE_FILL_FACTOR,
+                true, BF_HINT, false, asterixDataflowHelperFactory);
+
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, locations);
+
+        int[] treeFields = new int[] { 0 };
+
+        BTreeSearchOperatorDescriptor btreeSearchOp = new BTreeSearchOperatorDescriptor(spec, recordDescriptorAsterix,
+                storageManagerInterface, lcManagerProvider, fileSplitProviderAsterix, typeTraitsAsterix,
+                comparatorFactories, treeFields, null, null, true, true, asterixDataflowHelperFactory, false, false,
+                null, NoOpOperationCallbackFactory.INSTANCE, null, null);
+
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, btreeSearchOp, locations);
+
+        /*
+        * construct empty sink operator
+        */
+        EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, sink, locations);
+
+        /*
+         * connect operator descriptors
+         */
+        spec.connect(new OneToOneConnectorDescriptor(spec), emptyTupleSource, 0, scanner, 0);
+        if (!ckpointing) {
+            spec.connect(new OneToOneConnectorDescriptor(spec), scanner, 0, sort, 0);
+            spec.connect(new OneToOneConnectorDescriptor(spec), sort, 0, formatTransformer, 0);
+        } else {
+            spec.connect(new OneToOneConnectorDescriptor(spec), scanner, 0, formatTransformer, 0);
+        }
+
+        if (!samePartitioning) {
+            ITuplePartitionComputerFactory hashPartitionComputerFactory = getVertexPartitionComputerFactory();
+            spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory),
+                    formatTransformer, 0, sorter, 0);
+            spec.connect(new OneToOneConnectorDescriptor(spec), sorter, 0, writer, 0);
+        } else {
+            spec.connect(new OneToOneConnectorDescriptor(spec), formatTransformer, 0, writer, 0);
+        }
+
+        spec.connect(new OneToOneConnectorDescriptor(spec), writer, 0, btreeSearchOp, 0);
+        spec.connect(new OneToOneConnectorDescriptor(spec), btreeSearchOp, 0, sink, 0);
         spec.setFrameSize(frameSize);
         return spec;
     }

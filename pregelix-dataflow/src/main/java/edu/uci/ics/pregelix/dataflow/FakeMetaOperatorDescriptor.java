@@ -55,7 +55,7 @@ public class FakeMetaOperatorDescriptor extends AbstractSingleActivityOperatorDe
             long randomId = 42424242l;
             for (FileSplit f : fileSplitToAdd.getFileSplits()) {
                 String name = f.getLocalFile().getFile().getAbsolutePath();
-                if (RuntimeContext.get(ctx).getLocalResourceRepository().getResourceByName(name + "device_id_0/") == null)
+                if (RuntimeContext.get(ctx).getLocalResourceRepository().getResourceByName(name + "/device_id_0") == null)
                     RuntimeContext.get(ctx).getLocalResourceRepository()
                             .insert(new LocalResource(randomId++, name + "/device_id_0", 0, 0, null));
             }

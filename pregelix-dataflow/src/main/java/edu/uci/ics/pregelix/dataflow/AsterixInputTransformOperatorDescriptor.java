@@ -93,7 +93,7 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
             @SuppressWarnings("rawtypes")
             private final Vertex v = BspUtils.createVertex(conf);
             private final VLongWritable vertexId = new VLongWritable();
-            private final VLongWritable destId = new VLongWritable();
+            //private final VLongWritable destId = new VLongWritable();
             private final Writable emptyVertexValue = BspUtils.createVertexValue(conf);
 
             @Override
@@ -193,6 +193,10 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
 
                 AListPointable edges = (AListPointable) pointer.getFieldValues().get(2);
                 for (IVisitablePointable edge : edges.getItems()) {
+                    
+                    // TODO: pool
+                    VLongWritable destId = new VLongWritable();
+                    
                     ARecordPointable edgePointer = (ARecordPointable) edge;
                     destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(),
                             edgePointer.getFieldValues().get(0).getStartOffset() + 1));
