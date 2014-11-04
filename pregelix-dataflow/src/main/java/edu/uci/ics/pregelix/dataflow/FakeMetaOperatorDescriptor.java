@@ -40,7 +40,8 @@ public class FakeMetaOperatorDescriptor extends AbstractSingleActivityOperatorDe
     private static final long serialVersionUID = 1L;
     private IFileSplitProvider fileSplitToAdd;
 
-    public FakeMetaOperatorDescriptor(IOperatorDescriptorRegistry spec, RecordDescriptor internalRecordDescriptor, IFileSplitProvider fileSplitToAdd) {
+    public FakeMetaOperatorDescriptor(IOperatorDescriptorRegistry spec, RecordDescriptor internalRecordDescriptor,
+            IFileSplitProvider fileSplitToAdd) {
         super(spec, 0, 1);
         this.recordDescriptors[0] = internalRecordDescriptor;
         this.fileSplitToAdd = fileSplitToAdd;
@@ -49,18 +50,19 @@ public class FakeMetaOperatorDescriptor extends AbstractSingleActivityOperatorDe
     @Override
     public IOperatorNodePushable createPushRuntime(final IHyracksTaskContext ctx,
             final IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions) {
-    	
-    	try {
-    		long randomId = 42424242l;
-    		for(FileSplit f : fileSplitToAdd.getFileSplits()) {
-    			String name = f.getLocalFile().getFile().getAbsolutePath();
-	    		if(RuntimeContext.get(ctx).getLocalResourceRepository().getResourceByName(name+"device_id_0/") == null)
-	    			RuntimeContext.get(ctx).getLocalResourceRepository().insert(new LocalResource(randomId++, name+"/device_id_0", 0, 0, null));
-    		}
-		} catch (HyracksDataException e) {
-			e.printStackTrace();
-		}
-    	
+
+        try {
+            long randomId = 42424242l;
+            for (FileSplit f : fileSplitToAdd.getFileSplits()) {
+                String name = f.getLocalFile().getFile().getAbsolutePath();
+                if (RuntimeContext.get(ctx).getLocalResourceRepository().getResourceByName(name + "device_id_0/") == null)
+                    RuntimeContext.get(ctx).getLocalResourceRepository()
+                            .insert(new LocalResource(randomId++, name + "/device_id_0", 0, 0, null));
+            }
+        } catch (HyracksDataException e) {
+            e.printStackTrace();
+        }
+
         return createSourceInputPushRuntime(ctx, recordDescProvider, partition, nPartitions);
     }
 
@@ -69,11 +71,11 @@ public class FakeMetaOperatorDescriptor extends AbstractSingleActivityOperatorDe
         return new AbstractUnaryOutputSourceOperatorNodePushable() {
 
             public void initialize() throws HyracksDataException {
-            	
+
                 ByteBuffer frame = ctx.allocateFrame();
                 ArrayTupleBuilder tb = new ArrayTupleBuilder(0);
                 FrameTupleAppender appender = new FrameTupleAppender(ctx.getFrameSize());
-            	
+
                 writer.open();
                 appender.reset(frame, true);
                 if (!appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {

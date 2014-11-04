@@ -67,7 +67,8 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
     private final IConfigurationFactory confFactory;
     private final ARecordType recordType;
 
-    public AsterixInputTransformOperatorDescriptor(JobSpecification spec, RecordDescriptor rDesc, IConfigurationFactory confFactory, ARecordType recordType) {
+    public AsterixInputTransformOperatorDescriptor(JobSpecification spec, RecordDescriptor rDesc,
+            IConfigurationFactory confFactory, ARecordType recordType) {
         super(spec, 1, 1);
         this.recordDescriptors[0] = rDesc;
         this.confFactory = confFactory;
@@ -79,14 +80,21 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
             final IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions)
             throws HyracksDataException {
         return new AbstractUnaryInputUnaryOutputOperatorNodePushable() {
-            
-        	private final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
+
+            private final RecordDescriptor rd0 = recordDescProvider.getInputRecordDescriptor(getActivityId(), 0);
             private final FrameTupleAppender appender = new FrameTupleAppender(ctx.getFrameSize());
             private final ArrayTupleBuilder tb = new ArrayTupleBuilder(fieldSize);
             private final DataOutput dos = tb.getDataOutput();
             private final ByteBuffer writeBuffer = ctx.allocateFrame();
             private final FrameTupleAccessor accessor = new FrameTupleAccessor(ctx.getFrameSize(), rd0);
-            
+            private final Configuration conf = confFactory.createConfiguration(ctx);
+
+            // used for the transformation
+            @SuppressWarnings("rawtypes")
+            private final Vertex v = BspUtils.createVertex(conf);
+            private final VLongWritable vertexId = new VLongWritable();
+            private final VLongWritable destId = new VLongWritable();
+            private final Writable emptyVertexValue = BspUtils.createVertexValue(conf);
 
             @Override
             public void fail() throws HyracksDataException {
@@ -94,46 +102,43 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
             }
 
             @SuppressWarnings({ "rawtypes", "unchecked" })
-			@Override
-            public void nextFrame(ByteBuffer frame) throws HyracksDataException {	
-            	accessor.reset(frame);
-            	
+            @Override
+            public void nextFrame(ByteBuffer frame) throws HyracksDataException {
+                accessor.reset(frame);
+
                 for (int tIndex = 0; tIndex < accessor.getTupleCount(); tIndex++) {
-                	
+
                     int fldStart = accessor.getTupleStartOffset(tIndex) + accessor.getFieldSlotsLength()
                             + accessor.getFieldStartOffset(tIndex, 0);
                     int fldLen = accessor.getFieldLength(tIndex, 0);
-                    
-                    ARecordPointable recordPointer = (ARecordPointable) new PointableAllocator().allocateRecordValue(recordType);
+
+                    ARecordPointable recordPointer = (ARecordPointable) new PointableAllocator()
+                            .allocateRecordValue(recordType);
                     recordPointer.set(accessor.getBuffer().array(), fldStart, fldLen);
-                    
-                    Configuration conf = confFactory.createConfiguration(ctx);
-                    
+
                     Vertex v = convertPointableToVertex(recordPointer, conf);
-                    
-                    Writable emptyVertexValue = BspUtils.createVertexValue(conf);
-                    
+
                     if (v.getVertexValue() == null) {
                         v.setVertexValue(emptyVertexValue);
                     }
-                    
+
                     WritableComparable vertexIdWrite = v.getVertexId();
                     try {
-                    	tb.reset();
-                    	
-						vertexIdWrite.write(dos);
-						
-	                    tb.addFieldEndOffset();
+                        tb.reset();
 
-	                    v.write(dos);
-	                    
-	                    tb.addFieldEndOffset();
-	                    
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-                    
+                        vertexIdWrite.write(dos);
+
+                        tb.addFieldEndOffset();
+
+                        v.write(dos);
+
+                        tb.addFieldEndOffset();
+
+                    } catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+
                     if (!appender.append(tb.getFieldEndOffsets(), tb.getByteArray(), 0, tb.getSize())) {
                         if (appender.getTupleCount() <= 0) {
                             throw new IllegalStateException("zero tuples in a frame!");
@@ -154,8 +159,7 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                 writer.open();
                 appender.reset(writeBuffer, true);
             }
-            
-            
+
             @SuppressWarnings({ "rawtypes", "unchecked" })
             /**
              * Internal helper function to transform a Asterix ARecordPointable pointer into a Pregelix Vertex
@@ -164,78 +168,82 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
              * @param conf
              * @return
              */
-			private Vertex convertPointableToVertex(ARecordPointable pointer, Configuration conf) {
-            	
-                Vertex v = BspUtils.createVertex(conf);
-                
-                VLongWritable vertexId = new VLongWritable();
-                
-                vertexId.set(AInt64SerializerDeserializer.getLong(pointer.getFieldValues().get(0).getByteArray(), pointer.getFieldValues().get(0).getStartOffset() + 1));
+            private Vertex convertPointableToVertex(ARecordPointable pointer, Configuration conf) {
+
+                // reset vertex state for reuse
+                v.reset();
+                v.getEdges().clear();
+
+                vertexId.set(AInt64SerializerDeserializer.getLong(pointer.getFieldValues().get(0).getByteArray(),
+                        pointer.getFieldValues().get(0).getStartOffset() + 1));
                 v.setVertexId(vertexId);
-                
+
                 // type of the vertex value
-                ATypeTag valueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer.getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
-                
+                ATypeTag valueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer.getFieldTypeTags()
+                        .get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
+
                 // @TODO: Look for a better way to handle this hack
-                if(pointer.getFieldValues().get(1).getLength() <= 1) {
+                if (pointer.getFieldValues().get(1).getLength() <= 1) {
                     valueType = ATypeTag.NULL;
                 }
-                
+
                 // deserialize vertex value
-                v.setVertexValue(transformState(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer.getFieldValues().get(1).getStartOffset()+1));
-                
+                v.setVertexValue(transformState(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer
+                        .getFieldValues().get(1).getStartOffset() + 1));
+
                 AListPointable edges = (AListPointable) pointer.getFieldValues().get(2);
-                for(IVisitablePointable edge: edges.getItems()) {
-                	ARecordPointable edgePointer = (ARecordPointable) edge;
-                	VLongWritable destId = new VLongWritable();
-                	destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(), edgePointer.getFieldValues().get(0).getStartOffset() + 1));
-                	
-                	
-                	// type of the edge value
-                    ATypeTag edgeValueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer.getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
-                    
+                for (IVisitablePointable edge : edges.getItems()) {
+                    ARecordPointable edgePointer = (ARecordPointable) edge;
+                    destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(),
+                            edgePointer.getFieldValues().get(0).getStartOffset() + 1));
+
+                    // type of the edge value
+                    ATypeTag edgeValueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer
+                            .getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1)
+                            .getStartOffset()]);
+
                     // @TODO: Look for a better way to handle this hack
-                    if(edgePointer.getFieldValues().get(1).getLength() <= 1) {
+                    if (edgePointer.getFieldValues().get(1).getLength() <= 1) {
                         edgeValueType = ATypeTag.NULL;
                     }
-                    
-                    Writable edgeValue = transformState(edgePointer.getFieldValues().get(1).getByteArray(), edgeValueType, edgePointer.getFieldValues().get(1).getStartOffset()+1);
-                	
-                	v.addEdge(destId, edgeValue);
+
+                    Writable edgeValue = transformState(edgePointer.getFieldValues().get(1).getByteArray(),
+                            edgeValueType, edgePointer.getFieldValues().get(1).getStartOffset() + 1);
+
+                    v.addEdge(destId, edgeValue);
                 }
-                
+
                 return v;
-            	
             }
-            
+
             /**
              * @TODO: Move somewhere else
              * @TODO: Exception handling
-             * 
+             * @TODO: Implement a pool for the types
              * @param bytes
              * @param types
              */
             private Writable transformState(byte[] bytes, ATypeTag type, int offset) {
-                 switch (type) {
-                     case DOUBLE: {
-                         return new DoubleWritable(ADoubleSerializerDeserializer.getDouble(bytes, offset));
-                     }
-                     case FLOAT: {
-                         return new FloatWritable(AFloatSerializerDeserializer.getFloat(bytes, offset));
-                     }
-                     case BOOLEAN: {
-                         return new BooleanWritable(ABooleanSerializerDeserializer.getBoolean(bytes, offset));
-                     }
-                     case INT32: {
-                         return new IntWritable(AInt32SerializerDeserializer.getInt(bytes, offset));
-                     }
-                     case INT64: {
-                         return new LongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
-                     }
-                     case NULL: {
-                         return NullWritable.get();
-                     }
-                     case STRING:
+                switch (type) {
+                    case DOUBLE: {
+                        return new DoubleWritable(ADoubleSerializerDeserializer.getDouble(bytes, offset));
+                    }
+                    case FLOAT: {
+                        return new FloatWritable(AFloatSerializerDeserializer.getFloat(bytes, offset));
+                    }
+                    case BOOLEAN: {
+                        return new BooleanWritable(ABooleanSerializerDeserializer.getBoolean(bytes, offset));
+                    }
+                    case INT32: {
+                        return new IntWritable(AInt32SerializerDeserializer.getInt(bytes, offset));
+                    }
+                    case INT64: {
+                        return new LongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
+                    }
+                    case NULL: {
+                        return NullWritable.get();
+                    }
+                    case STRING:
                     case INT8:
                     case INT16:
                     case CIRCLE:
@@ -255,22 +263,19 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                     case RECORD:
                     case UNORDEREDLIST:
                     case UUID:
-                    case UUID_STRING:
-                    case SHORTWITHOUTTYPEINFO:
                     default: {
-                        throw new NotImplementedException("No type transformation implemented for type "
-                                + type + " .");
+                        throw new NotImplementedException("No type transformation implemented for type " + type + " .");
                     }
                 }
             }
 
-			@Override
-			public void close() throws HyracksDataException {
-	            if (appender.getTupleCount() > 0) {
-	                FrameUtils.flushFrame(writeBuffer, writer);
-	            }
-				writer.close();
-			}
+            @Override
+            public void close() throws HyracksDataException {
+                if (appender.getTupleCount() > 0) {
+                    FrameUtils.flushFrame(writeBuffer, writer);
+                }
+                writer.close();
+            }
 
         };
     }
