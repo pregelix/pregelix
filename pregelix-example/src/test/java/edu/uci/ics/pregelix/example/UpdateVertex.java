@@ -20,8 +20,8 @@ import java.util.Random;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.Text;
 
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 /**
  * @author yingyib

@@ -26,12 +26,12 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 
+import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.io.VertexInputFormat;
 import edu.uci.ics.pregelix.api.io.VertexReader;
 import edu.uci.ics.pregelix.api.util.BspUtils;
-import edu.uci.ics.pregelix.example.io.DoubleWritable;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 public class UpdateVertexInputFormat extends VertexInputFormat<VLongWritable, Text, FloatWritable, DoubleWritable> {
 

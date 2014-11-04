@@ -19,16 +19,22 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
+import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ADoubleSerializerDeserializer;
+import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AFloatSerializerDeserializer;
+import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AInt32SerializerDeserializer;
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AInt64SerializerDeserializer;
 import edu.uci.ics.asterix.om.pointables.AListPointable;
 import edu.uci.ics.asterix.om.pointables.ARecordPointable;
 import edu.uci.ics.asterix.om.pointables.PointableAllocator;
 import edu.uci.ics.asterix.om.pointables.base.IVisitablePointable;
 import edu.uci.ics.asterix.om.types.ARecordType;
+import edu.uci.ics.asterix.om.types.ATypeTag;
+import edu.uci.ics.asterix.om.types.EnumDeserializer;
+import edu.uci.ics.hyracks.algebricks.common.exceptions.NotImplementedException;
 import edu.uci.ics.hyracks.api.context.IHyracksTaskContext;
 import edu.uci.ics.hyracks.api.dataflow.IOperatorNodePushable;
 import edu.uci.ics.hyracks.api.dataflow.value.IRecordDescriptorProvider;
@@ -41,10 +47,16 @@ import edu.uci.ics.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import edu.uci.ics.hyracks.dataflow.common.comm.util.FrameUtils;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractSingleActivityOperatorDescriptor;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
+import edu.uci.ics.pregelix.api.datatypes.BooleanWritable;
+import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
+import edu.uci.ics.pregelix.api.datatypes.FloatWritable;
+import edu.uci.ics.pregelix.api.datatypes.IntWritable;
+import edu.uci.ics.pregelix.api.datatypes.LongWritable;
+import edu.uci.ics.pregelix.api.datatypes.NullWritable;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.util.BspUtils;
 import edu.uci.ics.pregelix.dataflow.base.IConfigurationFactory;
-import edu.uci.ics.pregelix.dataflow.util.IterationUtils;
 
 /**
  * This operator transforms Asterix types read from an Asterix LSMBTree to Pregelix Writables
@@ -86,26 +98,11 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
             public void nextFrame(ByteBuffer frame) throws HyracksDataException {	
             	accessor.reset(frame);
             	
-                int treeVertexSizeLimit = IterationUtils.getVFrameSize(ctx) / 2;
-                int dataflowPageSize = ctx.getFrameSize();
-            	
                 for (int tIndex = 0; tIndex < accessor.getTupleCount(); tIndex++) {
                 	
                     int fldStart = accessor.getTupleStartOffset(tIndex) + accessor.getFieldSlotsLength()
                             + accessor.getFieldStartOffset(tIndex, 0);
                     int fldLen = accessor.getFieldLength(tIndex, 0);
-                    
-                    /*IPrinter printer = new ARecordPrinterFactory(recordType).createPrinter();
-                    ARecordSerializerDeserializer serializer = new ARecordSerializerDeserializer(recordType);
-                    
-                    Object record = serializer.deserialize(new DataInputStream(new ByteArrayInputStream(accessor.getBuffer().array(), fldStart, fldLen)));
-                    try {
-						printer.print(accessor.getBuffer().array(), fldStart, fldLen, System.out);
-					} catch (AlgebricksException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-                    */
                     
                     ARecordPointable recordPointer = (ARecordPointable) new PointableAllocator().allocateRecordValue(recordType);
                     recordPointer.set(accessor.getBuffer().array(), fldStart, fldLen);
@@ -176,18 +173,95 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                 vertexId.set(AInt64SerializerDeserializer.getLong(pointer.getFieldValues().get(0).getByteArray(), pointer.getFieldValues().get(0).getStartOffset() + 1));
                 v.setVertexId(vertexId);
                 
-                v.setVertexValue(vertexId);
+                // type of the vertex value
+                ATypeTag valueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer.getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
+                
+                // @TODO: Look for a better way to handle this hack
+                if(pointer.getFieldValues().get(1).getLength() <= 1) {
+                    valueType = ATypeTag.NULL;
+                }
+                
+                // deserialize vertex value
+                v.setVertexValue(transformState(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer.getFieldValues().get(1).getStartOffset()+1));
                 
                 AListPointable edges = (AListPointable) pointer.getFieldValues().get(2);
                 for(IVisitablePointable edge: edges.getItems()) {
                 	ARecordPointable edgePointer = (ARecordPointable) edge;
                 	VLongWritable destId = new VLongWritable();
-                	destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(), edgePointer.getFieldValues().get(0).getStartOffset()+1));
-                	v.addEdge(destId, null);
+                	destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(), edgePointer.getFieldValues().get(0).getStartOffset() + 1));
+                	
+                	
+                	// type of the edge value
+                    ATypeTag edgeValueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer.getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
+                    
+                    // @TODO: Look for a better way to handle this hack
+                    if(edgePointer.getFieldValues().get(1).getLength() <= 1) {
+                        edgeValueType = ATypeTag.NULL;
+                    }
+                    
+                    Writable edgeValue = transformState(edgePointer.getFieldValues().get(1).getByteArray(), edgeValueType, edgePointer.getFieldValues().get(1).getStartOffset()+1);
+                	
+                	v.addEdge(destId, edgeValue);
                 }
                 
                 return v;
             	
+            }
+            
+            /**
+             * @TODO: Move somewhere else
+             * @TODO: Exception handling
+             * 
+             * @param bytes
+             * @param types
+             */
+            private Writable transformState(byte[] bytes, ATypeTag type, int offset) {
+                 switch (type) {
+                     case DOUBLE: {
+                         return new DoubleWritable(ADoubleSerializerDeserializer.getDouble(bytes, offset));
+                     }
+                     case FLOAT: {
+                         return new FloatWritable(AFloatSerializerDeserializer.getFloat(bytes, offset));
+                     }
+                     case BOOLEAN: {
+                         return new BooleanWritable(ABooleanSerializerDeserializer.getBoolean(bytes, offset));
+                     }
+                     case INT32: {
+                         return new IntWritable(AInt32SerializerDeserializer.getInt(bytes, offset));
+                     }
+                     case INT64: {
+                         return new LongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
+                     }
+                     case NULL: {
+                         return NullWritable.get();
+                     }
+                     case STRING:
+                    case INT8:
+                    case INT16:
+                    case CIRCLE:
+                    case DATE:
+                    case DATETIME:
+                    case LINE:
+                    case TIME:
+                    case DURATION:
+                    case YEARMONTHDURATION:
+                    case DAYTIMEDURATION:
+                    case INTERVAL:
+                    case ORDEREDLIST:
+                    case POINT:
+                    case POINT3D:
+                    case RECTANGLE:
+                    case POLYGON:
+                    case RECORD:
+                    case UNORDEREDLIST:
+                    case UUID:
+                    case UUID_STRING:
+                    case SHORTWITHOUTTYPEINFO:
+                    default: {
+                        throw new NotImplementedException("No type transformation implemented for type "
+                                + type + " .");
+                    }
+                }
             }
 
 			@Override

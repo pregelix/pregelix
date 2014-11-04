@@ -17,13 +17,13 @@ package edu.uci.ics.pregelix.example.trianglecounting;
 import org.apache.hadoop.mapreduce.Counters;
 
 import edu.uci.ics.hyracks.api.exceptions.HyracksDataException;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.job.PregelixJob;
 import edu.uci.ics.pregelix.api.util.BspUtils;
 import edu.uci.ics.pregelix.api.util.HadoopCountersAggregator;
 import edu.uci.ics.pregelix.example.client.Client;
 import edu.uci.ics.pregelix.example.data.VLongNormalizedKeyComputer;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 /**
  * The triangle counting example -- counting the triangles in an undirected graph.

@@ -78,6 +78,8 @@
 			<groupId>edu.uci.ics.hyracks</groupId>
 			<artifactId>pregelix-dataflow</artifactId>
 			<version>${pregelix.version}</version>
+			<type>jar</type>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>edu.uci.ics.hyracks</groupId>

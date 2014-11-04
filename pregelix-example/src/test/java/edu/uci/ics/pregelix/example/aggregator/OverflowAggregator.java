@@ -18,10 +18,10 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.Text;
 
 import edu.uci.ics.hyracks.api.exceptions.HyracksDataException;
+import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.GlobalAggregator;
 import edu.uci.ics.pregelix.api.graph.Vertex;
-import edu.uci.ics.pregelix.example.io.DoubleWritable;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 /**
  * Test the case where the global aggregate's state is bloated

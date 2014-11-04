@@ -21,10 +21,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.io.VertexWriter;
 import edu.uci.ics.pregelix.api.io.text.TextVertexOutputFormat;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 public class UpdateVertexOutputFormat extends TextVertexOutputFormat<VLongWritable, Text, FloatWritable> {
 

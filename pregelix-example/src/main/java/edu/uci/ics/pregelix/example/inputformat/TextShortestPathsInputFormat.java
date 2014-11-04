@@ -26,13 +26,13 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.io.VertexReader;
 import edu.uci.ics.pregelix.api.io.text.TextVertexInputFormat;
 import edu.uci.ics.pregelix.api.io.text.TextVertexInputFormat.TextVertexReader;
 import edu.uci.ics.pregelix.api.util.BspUtils;
-import edu.uci.ics.pregelix.example.io.DoubleWritable;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 public class TextShortestPathsInputFormat extends
         TextVertexInputFormat<VLongWritable, DoubleWritable, FloatWritable, DoubleWritable> {

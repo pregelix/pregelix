@@ -449,7 +449,7 @@ public abstract class JobGen implements IJobGen {
     @Override
     public JobSpecification generateLoadingJob() throws HyracksException {
     	JobSpecification spec;
-    	if(FileInputFormat.getInputPaths(pregelixJob)[0].toUri().getScheme().equals("asterix")) {
+    	if(FileInputFormat.getInputPaths(pregelixJob).length > 0 && FileInputFormat.getInputPaths(pregelixJob)[0].toUri().getScheme().equals("asterix")) {
     		spec = loadAsterixData(pregelixJob);
     	}
     	else {
@@ -753,7 +753,7 @@ public abstract class JobGen implements IJobGen {
         spec.connect(new OneToOneConnectorDescriptor(spec), projection, 0, formatTransformer, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), formatTransformer, 0, btreeBulkLoad, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), btreeBulkLoad, 0, sink, 0);
-        spec.setFrameSize(32768);
+        spec.setFrameSize(frameSize);
         return spec;
     }
 
