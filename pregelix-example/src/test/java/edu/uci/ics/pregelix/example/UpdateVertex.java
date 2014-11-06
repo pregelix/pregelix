@@ -27,7 +27,7 @@ import edu.uci.ics.pregelix.api.graph.Vertex;
  * @author yingyib
  */
 public class UpdateVertex extends Vertex<VLongWritable, Text, FloatWritable, VLongWritable> {
-    private final int MAX_VALUE_SIZE = 32768 / 2;
+    private final int MAX_VALUE_SIZE = 32768 / 4;
     private VLongWritable msg = new VLongWritable();
     private Text tempValue = new Text();
     private Random rand = new Random();
