@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -640,6 +641,22 @@ public abstract class JobGen implements IJobGen {
         // load Asterix file splits
         IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(FileInputFormat
                 .getInputPaths(job));
+        
+        // create array of NCs
+        String[] locations = new String[FileInputFormat.getInputPaths(job).length];
+        int i = 0;
+        for (Path p : FileInputFormat.getInputPaths(job)) {
+            locations[i++] = p.toUri().getHost();
+        }
+        
+        // Check if partitioning in Pregelix and Asterix is the same
+        List<String> l1 = new ArrayList<String>(Arrays.asList(locations));
+        List<String> l2 = new ArrayList<String>(Arrays.asList(ClusterConfig.getLocationConstraint()));
+
+        Collections.sort(l1);
+        Collections.sort(l2);
+
+        boolean samePartitioning = l1.equals(l2);
 
         /*
          * Create Asterix Types
@@ -698,7 +715,9 @@ public abstract class JobGen implements IJobGen {
          */
         FakeMetaOperatorDescriptor fakeStart = new FakeMetaOperatorDescriptor(spec, recordDescriptorAsterix,
                 asterixFileSplitProvider);
-        setLocationConstraint(spec, fakeStart);
+        
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, fakeStart, locations);
+        
 
         /*
          * Read from Asterix b-tree
@@ -708,18 +727,22 @@ public abstract class JobGen implements IJobGen {
                 comparatorFactories, treeFields, null, null, true, true, asterixDataflowHelperFactory, false, false,
                 null, NoOpOperationCallbackFactory.INSTANCE, null, null);
 
-        setLocationConstraint(spec, btreeSearchOp);
+        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, btreeSearchOp, locations);
         
         /*
          * construct sort operator
          */
         int[] sortFields = new int[1];
         sortFields[0] = 0;
-        INormalizedKeyComputerFactory nkmFactory = JobGenUtil.getINormalizedKeyComputerFactory(conf);
-        comparatorFactories[0] = JobGenUtil.getIBinaryComparatorFactory(0, vertexIdClass);;
-        ExternalSortOperatorDescriptor sorter = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields,
-                nkmFactory, comparatorFactories, recordDescriptorAsterix);
-        setLocationConstraint(spec, sorter);
+        
+        ExternalSortOperatorDescriptor sorter = null;
+        if(!samePartitioning) {
+            INormalizedKeyComputerFactory nkmFactory = JobGenUtil.getINormalizedKeyComputerFactory(conf);
+            comparatorFactories[0] = JobGenUtil.getIBinaryComparatorFactory(0, vertexIdClass);;
+            sorter = new ExternalSortOperatorDescriptor(spec, maxFrameNumber, sortFields,
+                    nkmFactory, comparatorFactories, recordDescriptorAsterix);
+            setLocationConstraint(spec, sorter);
+        }
 
         /*
          * Project, remove ID field
@@ -765,9 +788,14 @@ public abstract class JobGen implements IJobGen {
          * connect operator descriptors
          */
         spec.connect(new OneToOneConnectorDescriptor(spec), fakeStart, 0, btreeSearchOp, 0);
-        ITuplePartitionComputerFactory hashPartitionComputerFactory = getVertexPartitionComputerFactory();
-        spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory), btreeSearchOp, 0, sorter, 0);
-        spec.connect(new OneToOneConnectorDescriptor(spec), sorter, 0, projection, 0);
+        if(!samePartitioning) {
+            ITuplePartitionComputerFactory hashPartitionComputerFactory = getVertexPartitionComputerFactory();
+            spec.connect(new MToNPartitioningConnectorDescriptor(spec, hashPartitionComputerFactory), btreeSearchOp, 0, sorter, 0);
+            spec.connect(new OneToOneConnectorDescriptor(spec), sorter, 0, projection, 0);
+        }
+        else {
+            spec.connect(new OneToOneConnectorDescriptor(spec), btreeSearchOp, 0, projection, 0);
+        }
         spec.connect(new OneToOneConnectorDescriptor(spec), projection, 0, formatTransformer, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), formatTransformer, 0, btreeBulkLoad, 0);
         spec.connect(new OneToOneConnectorDescriptor(spec), btreeBulkLoad, 0, sink, 0);

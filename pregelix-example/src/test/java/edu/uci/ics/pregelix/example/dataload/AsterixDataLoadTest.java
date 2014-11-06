@@ -43,7 +43,8 @@ public class AsterixDataLoadTest {
 
     private static final Logger LOGGER = Logger.getLogger(DataLoadTest.class.getName());
 
-    private static final String PATH_TO_CLUSTER_STORE = "src/test/resources/cluster/singlestore.properties";
+    private static final String PATH_TO_CLUSTER_STORE = "src/test/resources/cluster/stores.properties";
+    private static final String PATH_TO_CLUSTER_STORE_SINGLE = "src/test/resources/cluster/singlestore.properties";
     private static final String PATH_TO_CLUSTER_PROPERTIES = "src/test/resources/cluster/cluster.properties";
 
     private static final String HYRACKS_APP_NAME = "asterixLoading";
@@ -51,8 +52,7 @@ public class AsterixDataLoadTest {
     
     private static final String ASTERIX_INPUT_INDEX_PATH = "asterix://nc1"+(new File("src/test/resources/asterixLoading/nc1data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath())
             +";asterix://nc2"+(new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
-
-
+    
     private JobGenOuterJoin giraphTestJobGen;
     private PregelixJob job;
 
@@ -67,9 +67,10 @@ public class AsterixDataLoadTest {
         job.getConfiguration().set(PregelixJob.JOB_ID, "test_job");
     }
 
-    public void setUp() throws Exception {
-        ClusterConfig.setStorePath(PATH_TO_CLUSTER_STORE);
+    public void setUp(String storePath) throws Exception {
+        ClusterConfig.setStorePath(storePath);
         ClusterConfig.setClusterPropertiesPath(PATH_TO_CLUSTER_PROPERTIES);
+        ClusterConfig.clearConnection();
         cleanupStores();
         PregelixHyracksIntegrationUtil.init();
         LOGGER.info("Hyracks mini-cluster started");
@@ -97,9 +98,25 @@ public class AsterixDataLoadTest {
         LOGGER.info("Hyracks mini-cluster shut down");
     }
 
+    
     @Test
-    public void test() throws Exception {
-        setUp();
+    public void testDifferentPartitioning() throws Exception {
+        setUp(PATH_TO_CLUSTER_STORE);
+        runCreation();
+        runDataLoad();
+        runIndexScan();
+        try {
+            compareResults();
+        } catch (Exception e) {
+            tearDown();
+            throw e;
+        }
+        tearDown();
+    }
+    
+    @Test
+    public void testSamePartitioning() throws Exception {
+        setUp(PATH_TO_CLUSTER_STORE_SINGLE);
         runCreation();
         runDataLoad();
         runIndexScan();

@@ -58,7 +58,7 @@ public class ClusterConfig {
     private static Set<String> blackListNodes = new HashSet<String>();
     private static IHyracksClientConnection hcc;
     private static final int DEFAULT_CC_HTTP_PORT = 16001;
-
+    
     /**
      * let tests set config path to be whatever
      * 
@@ -275,5 +275,9 @@ public class ClusterConfig {
 
     public static void addToBlackListNodes(Collection<String> nodes) {
         blackListNodes.addAll(nodes);
+    }
+    
+    public static void clearConnection() {
+        hcc = null;
     }
 }
