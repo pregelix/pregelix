@@ -20,14 +20,14 @@ import java.util.Random;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.Text;
 
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 /**
  * @author yingyib
  */
 public class UpdateVertex extends Vertex<VLongWritable, Text, FloatWritable, VLongWritable> {
-    private final int MAX_VALUE_SIZE = 32768 / 2;
+    private final int MAX_VALUE_SIZE = 32768 / 4;
     private VLongWritable msg = new VLongWritable();
     private Text tempValue = new Text();
     private Random rand = new Random();

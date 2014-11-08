@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import edu.uci.ics.pregelix.api.io.WritableSizable;
 

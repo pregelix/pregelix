@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import java.io.DataInput;
 import java.io.DataOutput;

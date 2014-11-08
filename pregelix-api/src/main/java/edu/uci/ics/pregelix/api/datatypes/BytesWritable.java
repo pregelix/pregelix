@@ -12,25 +12,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import edu.uci.ics.pregelix.api.io.WritableSizable;
 
 /**
- * Writable for Boolean values.
+ * Writable for Bytes values.
  */
-public class BooleanWritable extends org.apache.hadoop.io.BooleanWritable implements WritableSizable {
+public class BytesWritable extends org.apache.hadoop.io.BytesWritable implements WritableSizable {
 
-    public BooleanWritable(boolean value) {
+    public BytesWritable(byte[] value) {
         super(value);
     }
 
-    public BooleanWritable() {
+    public BytesWritable() {
         super();
     }
 
+    @Override
     public int sizeInBytes() {
-        return 1;
+        return getLength() + 4; // add the integer size slot
     }
 
 }

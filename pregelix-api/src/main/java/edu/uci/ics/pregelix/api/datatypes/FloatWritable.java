@@ -12,26 +12,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.uci.ics.pregelix.example.io;
+
+package edu.uci.ics.pregelix.api.datatypes;
 
 import edu.uci.ics.pregelix.api.io.WritableSizable;
 
-/**
- * Writable for Bytes values.
- */
-public class BytesWritable extends org.apache.hadoop.io.BytesWritable implements WritableSizable {
+/** A WritableComparable for floats. */
+public class FloatWritable extends org.apache.hadoop.io.FloatWritable implements WritableSizable {
 
-    public BytesWritable(byte[] value) {
+    public FloatWritable(float value) {
         super(value);
     }
 
-    public BytesWritable() {
+    public FloatWritable() {
         super();
     }
 
-    @Override
     public int sizeInBytes() {
-        return getLength() + 4; // add the integer size slot
+        return 4;
     }
-
 }

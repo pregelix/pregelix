@@ -21,16 +21,16 @@ import java.util.Random;
 
 import org.junit.Test;
 
+import edu.uci.ics.pregelix.api.datatypes.BooleanWritable;
+import edu.uci.ics.pregelix.api.datatypes.ByteWritable;
+import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
+import edu.uci.ics.pregelix.api.datatypes.IntWritable;
+import edu.uci.ics.pregelix.api.datatypes.LongWritable;
+import edu.uci.ics.pregelix.api.datatypes.NullWritable;
+import edu.uci.ics.pregelix.api.datatypes.VIntWritable;
+import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.MsgList;
 import edu.uci.ics.pregelix.api.io.WritableSizable;
-import edu.uci.ics.pregelix.example.io.BooleanWritable;
-import edu.uci.ics.pregelix.example.io.ByteWritable;
-import edu.uci.ics.pregelix.example.io.DoubleWritable;
-import edu.uci.ics.pregelix.example.io.IntWritable;
-import edu.uci.ics.pregelix.example.io.LongWritable;
-import edu.uci.ics.pregelix.example.io.NullWritable;
-import edu.uci.ics.pregelix.example.io.VIntWritable;
-import edu.uci.ics.pregelix.example.io.VLongWritable;
 
 /**
  * @author yingyib

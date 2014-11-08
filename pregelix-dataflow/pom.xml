@@ -137,5 +137,15 @@
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
+		<dependency>
+			<groupId>edu.uci.ics.hyracks</groupId>
+			<artifactId>hyracks-storage-am-lsm-btree</artifactId>
+			<version>${hyracks.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>edu.uci.ics.asterix</groupId>
+			<artifactId>asterix-om</artifactId>
+			<version>${asterix.version}</version>
+		</dependency>
 	</dependencies>
 </project>

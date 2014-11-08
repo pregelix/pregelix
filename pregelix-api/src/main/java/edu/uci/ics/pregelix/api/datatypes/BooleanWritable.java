@@ -12,24 +12,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import edu.uci.ics.pregelix.api.io.WritableSizable;
 
-/** A WritableComparable for ints. */
-public class IntWritable extends org.apache.hadoop.io.IntWritable implements WritableSizable {
+/**
+ * Writable for Boolean values.
+ */
+public class BooleanWritable extends org.apache.hadoop.io.BooleanWritable implements WritableSizable {
 
-    public IntWritable(int value) {
+    public BooleanWritable(boolean value) {
         super(value);
     }
 
-    public IntWritable() {
+    public BooleanWritable() {
         super();
     }
 
     public int sizeInBytes() {
-        return 4;
+        return 1;
     }
 
 }

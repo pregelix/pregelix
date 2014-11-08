@@ -28,6 +28,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
     <hyracks.version>0.2.13</hyracks.version>
     <pregelix.version>0.2.14-SNAPSHOT</pregelix.version>
+    <asterix.version>0.8.6</asterix.version>
     <junit.version>4.8.1</junit.version>
     <commons.io.version>2.4</commons.io.version>
  </properties>
@@ -119,6 +120,10 @@
     <repository>
       <id>hyracks-public</id>
       <url>http://obelix.ics.uci.edu/nexus/content/groups/hyracks-public/</url>
+    </repository>
+    <repository>
+      <id>asterix-public</id>
+      <url>http://obelix.ics.uci.edu/nexus/content/repositories/asterix-public/</url>
     </repository>
     <repository>
       <id>jboss-public</id>

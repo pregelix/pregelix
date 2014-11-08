@@ -15,7 +15,7 @@
 package edu.uci.ics.pregelix.example.data;
 
 import edu.uci.ics.pregelix.api.graph.NormalizedKeyComputer;
-import edu.uci.ics.pregelix.example.utils.SerDeUtils;
+import edu.uci.ics.pregelix.api.util.SerDeUtils;
 
 /**
  * @author yingyib

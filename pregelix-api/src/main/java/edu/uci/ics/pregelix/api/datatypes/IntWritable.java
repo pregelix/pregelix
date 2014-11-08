@@ -13,23 +13,23 @@
  * limitations under the License.
  */
 
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import edu.uci.ics.pregelix.api.io.WritableSizable;
 
-/** A WritableComparable for longs. */
-public class LongWritable extends org.apache.hadoop.io.LongWritable implements WritableSizable {
+/** A WritableComparable for ints. */
+public class IntWritable extends org.apache.hadoop.io.IntWritable implements WritableSizable {
 
-    public LongWritable(long value) {
+    public IntWritable(int value) {
         super(value);
     }
 
-    public LongWritable() {
+    public IntWritable() {
         super();
     }
 
     public int sizeInBytes() {
-        return 8;
+        return 4;
     }
 
 }

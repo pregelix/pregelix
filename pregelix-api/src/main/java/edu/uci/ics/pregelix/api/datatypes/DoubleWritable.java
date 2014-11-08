@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package edu.uci.ics.pregelix.example.io;
+package edu.uci.ics.pregelix.api.datatypes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -21,7 +21,7 @@ import java.io.IOException;
 
 import edu.uci.ics.pregelix.api.io.Pointable;
 import edu.uci.ics.pregelix.api.io.WritableSizable;
-import edu.uci.ics.pregelix.example.utils.SerDeUtils;
+import edu.uci.ics.pregelix.api.util.SerDeUtils;
 
 /**
  * Writable for Double values.

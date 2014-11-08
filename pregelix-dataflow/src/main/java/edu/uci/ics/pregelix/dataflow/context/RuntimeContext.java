@@ -68,7 +68,7 @@ public class RuntimeContext implements IWorkspaceFileFactory {
         }
     };
 
-    public RuntimeContext(INCApplicationContext appCtx, int vFrameSize) {
+    public RuntimeContext(INCApplicationContext appCtx, int vFrameSize, int memPageSize) {
         this.vFrameSize = vFrameSize;
         int pageSize = vFrameSize;
         long memSize = Runtime.getRuntime().maxMemory();
@@ -84,7 +84,7 @@ public class RuntimeContext implements IWorkspaceFileFactory {
         int numPagesInMemComponents = numPages / 8;
         vbcs = new ArrayList<IVirtualBufferCache>();
         IVirtualBufferCache vBufferCache = new MultitenantVirtualBufferCache(new VirtualBufferCache(
-                new HeapBufferAllocator(), pageSize, numPagesInMemComponents));
+                new HeapBufferAllocator(), memPageSize, numPagesInMemComponents));
         vbcs.add(vBufferCache);
         ioManager = (IOManager) appCtx.getRootContext().getIOManager();
         lcManager = new NoBudgetIndexLifecycleManager();

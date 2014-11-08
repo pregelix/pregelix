@@ -24,10 +24,14 @@ public class NCApplicationEntryPoint implements INCApplicationEntryPoint {
     @Override
     public void start(INCApplicationContext ncAppCtx, String[] args) throws Exception {
         int vFrameSize = 65536;
+        int memPageSize = 131072;
         if(args.length >0){
             vFrameSize = Integer.parseInt(args[0]);
         }
-        rCtx = new RuntimeContext(ncAppCtx, vFrameSize);
+        if(args.length >1){
+        	memPageSize = Integer.parseInt(args[1]);
+        }
+        rCtx = new RuntimeContext(ncAppCtx, vFrameSize, memPageSize);
         ncAppCtx.setApplicationObject(rCtx);
     }
 

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 
+import edu.uci.ics.asterix.common.config.GlobalConfig;
 import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
 
@@ -66,6 +67,8 @@ public class RunJobTestSuite extends TestSuite {
 
     private static final String DATA_PATH5 = "data/clique3/clique.txt";
     private static final String HDFS_PATH5 = "/clique3/";
+    
+    private static final String TEST_CONFIG_FILE_NAME = "asterix-build-configuration.xml";
 
     private static final String HADOOP_CONF_PATH = ACTUAL_RESULT_DIR + File.separator + "conf.xml";
     private MiniDFSCluster dfsCluster;
@@ -78,6 +81,9 @@ public class RunJobTestSuite extends TestSuite {
         ClusterConfig.setClusterPropertiesPath(PATH_TO_CLUSTER_PROPERTIES);
         cleanupStores();
         PregelixHyracksIntegrationUtil.init();
+        
+        System.setProperty(GlobalConfig.CONFIG_FILE_PROPERTY, TEST_CONFIG_FILE_NAME);
+        
         LOGGER.info("Hyracks mini-cluster started");
         FileUtils.forceMkdir(new File(ACTUAL_RESULT_DIR));
         FileUtils.cleanDirectory(new File(ACTUAL_RESULT_DIR));
