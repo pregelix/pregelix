@@ -142,6 +142,7 @@ import edu.uci.ics.pregelix.dataflow.std.base.IRuntimeHookFactory;
 import edu.uci.ics.pregelix.dataflow.std.group.ClusteredGroupOperatorDescriptor;
 import edu.uci.ics.pregelix.dataflow.std.group.IClusteredAggregatorDescriptorFactory;
 import edu.uci.ics.pregelix.dataflow.std.sort.FastSortOperatorDescriptor;
+import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 import edu.uci.ics.pregelix.runtime.bootstrap.IndexLifeCycleManagerProvider;
 import edu.uci.ics.pregelix.runtime.bootstrap.StorageManagerInterface;
 import edu.uci.ics.pregelix.runtime.bootstrap.VirtualBufferCacheProvider;
@@ -420,7 +421,7 @@ public abstract class JobGen implements IJobGen {
     public JobSpecification scanIndexWriteGraph() throws HyracksException {
 
         JobSpecification spec;
-        if (FileOutputFormat.getOutputPath(pregelixJob).toString().startsWith("asterix:/")) {
+        if (FileOutputFormat.getOutputPath(pregelixJob) != null && FileOutputFormat.getOutputPath(pregelixJob).toString().startsWith("asterix:/")) {
             spec = scanIndexWriteToAsterix(conf, false);
         } else {
             spec = scanIndexWriteToHDFS(conf, false);
@@ -643,6 +644,21 @@ public abstract class JobGen implements IJobGen {
         // load vertex information
         Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
         Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
+        IAType vertexValueType;
+        try {
+            Writable vertexValueWritable = BspUtils.getVertexValueClass(conf).newInstance();
+            vertexValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(vertexValueWritable).getType();
+        } catch (Exception e1) {
+            throw new HyracksException("Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
+        } 
+        
+        IAType edgeValueType;
+        try {
+            Writable edgeValueWritable = BspUtils.getEdgeValueClass(conf).newInstance();
+            edgeValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(edgeValueWritable).getType();
+        } catch (Exception e1) {
+            throw new HyracksException("Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
+        } 
 
         // load Pregelix file splits
         IFileSplitProvider fileSplitProvider = getFileSplitProvider(jobId, PRIMARY_INDEX);
@@ -676,12 +692,12 @@ public abstract class JobGen implements IJobGen {
 
         IAType[] fieldTypesEdges = new IAType[2];
         fieldTypesEdges[0] = BuiltinType.AINT64;
-        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }),
                 "value");
 
         IAType[] fieldTypesNodes = new IAType[3];
         fieldTypesNodes[0] = BuiltinType.AINT64;
-        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }),
                 "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
@@ -908,9 +924,27 @@ public abstract class JobGen implements IJobGen {
     @SuppressWarnings({ "rawtypes" })
     private JobSpecification scanIndexWriteToAsterix(Configuration conf, boolean ckpointing)
             throws HyracksDataException, HyracksException {
+        
+        // load vertex information
         Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
         Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
         JobSpecification spec = new JobSpecification(frameSize);
+        
+        IAType vertexValueType;
+        try {
+            Writable vertexValueWritable = BspUtils.getVertexValueClass(conf).newInstance();
+            vertexValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(vertexValueWritable).getType();
+        } catch (Exception e1) {
+            throw new HyracksException("Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
+        } 
+        
+        IAType edgeValueType;
+        try {
+            Writable edgeValueWritable = BspUtils.getEdgeValueClass(conf).newInstance();
+            edgeValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(edgeValueWritable).getType();
+        } catch (Exception e1) {
+            throw new HyracksException("Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
+        } 
 
         IConfigurationFactory confFactory = new ConfigurationFactory(conf);
         RecordDescriptor recordDescriptor = DataflowUtils.getRecordDescriptorFromKeyValueClasses(conf,
@@ -985,12 +1019,12 @@ public abstract class JobGen implements IJobGen {
 
         IAType[] fieldTypesEdges = new IAType[2];
         fieldTypesEdges[0] = BuiltinType.AINT64;
-        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }),
                 "value");
 
         IAType[] fieldTypesNodes = new IAType[3];
         fieldTypesNodes[0] = BuiltinType.AINT64;
-        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, BuiltinType.AINT64 }),
+        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }),
                 "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",

@@ -20,22 +20,14 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.io.Writable;
-
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AInt64SerializerDeserializer;
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ARecordSerializerDeserializer;
-import edu.uci.ics.asterix.om.base.ABoolean;
-import edu.uci.ics.asterix.om.base.ADouble;
-import edu.uci.ics.asterix.om.base.AFloat;
-import edu.uci.ics.asterix.om.base.AInt32;
 import edu.uci.ics.asterix.om.base.AInt64;
-import edu.uci.ics.asterix.om.base.ANull;
 import edu.uci.ics.asterix.om.base.ARecord;
 import edu.uci.ics.asterix.om.base.AUnorderedList;
 import edu.uci.ics.asterix.om.base.IAObject;
 import edu.uci.ics.asterix.om.types.ARecordType;
 import edu.uci.ics.asterix.om.types.AUnorderedListType;
-import edu.uci.ics.hyracks.algebricks.common.exceptions.NotImplementedException;
 import edu.uci.ics.hyracks.api.context.IHyracksTaskContext;
 import edu.uci.ics.hyracks.api.dataflow.IOperatorNodePushable;
 import edu.uci.ics.hyracks.api.dataflow.value.IRecordDescriptorProvider;
@@ -48,17 +40,12 @@ import edu.uci.ics.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import edu.uci.ics.hyracks.dataflow.common.comm.util.FrameUtils;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractSingleActivityOperatorDescriptor;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
-import edu.uci.ics.pregelix.api.datatypes.BooleanWritable;
-import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
-import edu.uci.ics.pregelix.api.datatypes.FloatWritable;
-import edu.uci.ics.pregelix.api.datatypes.IntWritable;
-import edu.uci.ics.pregelix.api.datatypes.LongWritable;
-import edu.uci.ics.pregelix.api.datatypes.NullWritable;
 import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Edge;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.dataflow.base.IConfigurationFactory;
 import edu.uci.ics.pregelix.dataflow.std.base.IRecordDescriptorFactory;
+import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 
 /**
  * This operator transforms Asterix types read from an Asterix LSMBTree to Pregelix Writables
@@ -125,7 +112,7 @@ public class AsterixOutputTransformOperatorDescriptor extends AbstractSingleActi
                             AInt64 destId = new AInt64(((VLongWritable) e.getDestVertexId()).get());
                             IAObject[] fields = new IAObject[2];
                             fields[0] = destId;
-                            fields[1] = transformState(e.getEdgeValue());
+                            fields[1] = PregelixAsterixIntegrationUtil.transformStateToAsterix(e.getEdgeValue());
                             ARecord edgeRecord = new ARecord(
                                     (ARecordType) ((AUnorderedListType) recordType.getFieldTypes()[2]).getItemType(),
                                     fields);
@@ -137,7 +124,7 @@ public class AsterixOutputTransformOperatorDescriptor extends AbstractSingleActi
 
                         IAObject[] fields = new IAObject[3];
                         fields[0] = vertexId;
-                        fields[1] = transformState(v.getVertexValue());
+                        fields[1] = PregelixAsterixIntegrationUtil.transformStateToAsterix(v.getVertexValue());
                         fields[2] = edgeContainer;
                         ARecord record = new ARecord(recordType, fields);
 
@@ -166,42 +153,6 @@ public class AsterixOutputTransformOperatorDescriptor extends AbstractSingleActi
                 }
             }
             
-            /**
-             * @TODO: Move somewhere else
-             * @TODO: Exception handling
-             * @TODO: Implement a pool for the types
-             * @param bytes
-             * @param types
-             */
-            private IAObject transformState(Writable value) {
-                
-                if(value instanceof DoubleWritable) {
-                    return new ADouble(((DoubleWritable) value).get());
-                }
-                else if(value instanceof FloatWritable) {
-                    return new AFloat(((FloatWritable) value).get());
-                } 
-                else if(value instanceof BooleanWritable) {
-                    if(((BooleanWritable) value).get()) {
-                        return ABoolean.TRUE;
-                    }
-                    else {
-                        return ABoolean.FALSE;
-                    }
-                }
-                else if(value instanceof IntWritable) {
-                    return new AInt32(((IntWritable) value).get());
-                } 
-                else if(value instanceof LongWritable) {
-                    return new AInt64(((LongWritable) value).get());
-                } 
-                else if(value instanceof NullWritable) {
-                    return ANull.NULL;
-                } 
-                else {
-                    throw new NotImplementedException("No type transformation implemented for writable " + value.getClass().getName() + " .");
-                }
-            }
 
             @Override
             public void fail() throws HyracksDataException {
@@ -219,7 +170,6 @@ public class AsterixOutputTransformOperatorDescriptor extends AbstractSingleActi
                     throw new HyracksDataException(e);
                 }
             }
-
         };
     }
 }

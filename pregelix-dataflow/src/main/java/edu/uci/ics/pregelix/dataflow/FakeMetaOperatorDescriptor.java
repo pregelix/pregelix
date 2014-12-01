@@ -52,7 +52,12 @@ public class FakeMetaOperatorDescriptor extends AbstractSingleActivityOperatorDe
             final IRecordDescriptorProvider recordDescProvider, int partition, int nPartitions) {
 
         try {
-            long randomId = 42424242l;
+            long randomId;
+            do {
+                randomId = Math.round(1000000+(Math.random()*100000));
+            } 
+            while (RuntimeContext.get(ctx).getLocalResourceRepository().getResourceById(randomId) != null);
+
             for (FileSplit f : fileSplitToAdd.getFileSplits()) {
                 String name = f.getLocalFile().getFile().getAbsolutePath();
                 if (RuntimeContext.get(ctx).getLocalResourceRepository().getResourceByName(name + "/device_id_0") == null)

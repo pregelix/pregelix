@@ -33,6 +33,7 @@ import edu.uci.ics.pregelix.core.optimizer.IOptimizer;
 import edu.uci.ics.pregelix.core.optimizer.NoOpOptimizer;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
 import edu.uci.ics.pregelix.example.ConnectedComponentsVertex;
+import edu.uci.ics.pregelix.example.ConnectedComponentsVertex.SimpleConnectedComponentsVertexOutputFormat;
 import edu.uci.ics.pregelix.example.inputformat.TextConnectedComponentsInputFormat;
 import edu.uci.ics.pregelix.example.util.TestUtils;
 
@@ -41,7 +42,7 @@ public class AsterixDataLoadTest {
     private static final String ACTUAL_RESULT_DIR = "actual";
     private static final String NC1 = "nc1";
 
-    private static final Logger LOGGER = Logger.getLogger(DataLoadTest.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AsterixDataLoadTest.class.getName());
 
     private static final String PATH_TO_CLUSTER_STORE = "src/test/resources/cluster/stores.properties";
     private static final String PATH_TO_CLUSTER_STORE_SINGLE = "src/test/resources/cluster/singlestore.properties";
@@ -52,7 +53,7 @@ public class AsterixDataLoadTest {
     
     private static final String ASTERIX_INPUT_INDEX_PATH = "asterix://nc1"+(new File("src/test/resources/asterixLoading/nc1data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath())
             +";asterix://nc2"+(new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
-    
+
     private JobGenOuterJoin giraphTestJobGen;
     private PregelixJob job;
 
@@ -62,6 +63,7 @@ public class AsterixDataLoadTest {
         job.setVertexInputFormatClass(TextConnectedComponentsInputFormat.class);
         job.getConfiguration().setClass(PregelixJob.VERTEX_INDEX_CLASS, LongWritable.class, WritableComparable.class);
         job.getConfiguration().setClass(PregelixJob.VERTEX_VALUE_CLASS, LongWritable.class, Writable.class);
+        job.setVertexOutputFormatClass(SimpleConnectedComponentsVertexOutputFormat.class);
         job.getConfiguration().setClass(PregelixJob.EDGE_VALUE_CLASS, LongWritable.class, Writable.class);
         job.getConfiguration().setClass(PregelixJob.MESSAGE_VALUE_CLASS, LongWritable.class, Writable.class);
         job.getConfiguration().set(PregelixJob.JOB_ID, "test_job");
@@ -128,6 +130,24 @@ public class AsterixDataLoadTest {
         }
         tearDown();
     }
+    
+    /*
+    @Test
+    public void testWrite() throws Exception {
+        setUp(PATH_TO_CLUSTER_STORE_SINGLE);  
+        runCreation();
+        runDataLoad();
+        runWrite();
+        try {
+            compareResults();
+        } catch (Exception e) {
+            tearDown();
+            throw e;
+        }
+        tearDown();
+    }
+    */
+    
 
     private void runCreation() throws Exception {
         try {
@@ -156,6 +176,19 @@ public class AsterixDataLoadTest {
             throw e;
         }
     }
+    
+    /*
+    private void runWrite() throws Exception {
+        try {
+            FileOutputFormat.setOutputPath(job, new Path("asterix://nc1"+(new File("actual/").getAbsolutePath())));
+            
+            JobSpecification scanWriteJobSpec = giraphTestJobGen.scanIndexWriteGraph();
+            PregelixHyracksIntegrationUtil.runJob(scanWriteJobSpec, HYRACKS_APP_NAME);
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    */
 
     private void compareResults() throws Exception {
         PregelixJob job = new PregelixJob(JOB_NAME);

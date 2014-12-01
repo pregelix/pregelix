@@ -22,10 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
-import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ADoubleSerializerDeserializer;
-import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AFloatSerializerDeserializer;
-import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AInt32SerializerDeserializer;
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.AInt64SerializerDeserializer;
 import edu.uci.ics.asterix.om.pointables.AListPointable;
 import edu.uci.ics.asterix.om.pointables.ARecordPointable;
@@ -34,7 +30,6 @@ import edu.uci.ics.asterix.om.pointables.base.IVisitablePointable;
 import edu.uci.ics.asterix.om.types.ARecordType;
 import edu.uci.ics.asterix.om.types.ATypeTag;
 import edu.uci.ics.asterix.om.types.EnumDeserializer;
-import edu.uci.ics.hyracks.algebricks.common.exceptions.NotImplementedException;
 import edu.uci.ics.hyracks.api.context.IHyracksTaskContext;
 import edu.uci.ics.hyracks.api.dataflow.IOperatorNodePushable;
 import edu.uci.ics.hyracks.api.dataflow.value.IRecordDescriptorProvider;
@@ -47,16 +42,11 @@ import edu.uci.ics.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import edu.uci.ics.hyracks.dataflow.common.comm.util.FrameUtils;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractSingleActivityOperatorDescriptor;
 import edu.uci.ics.hyracks.dataflow.std.base.AbstractUnaryInputUnaryOutputOperatorNodePushable;
-import edu.uci.ics.pregelix.api.datatypes.BooleanWritable;
-import edu.uci.ics.pregelix.api.datatypes.DoubleWritable;
-import edu.uci.ics.pregelix.api.datatypes.FloatWritable;
-import edu.uci.ics.pregelix.api.datatypes.IntWritable;
-import edu.uci.ics.pregelix.api.datatypes.LongWritable;
-import edu.uci.ics.pregelix.api.datatypes.NullWritable;
 import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 import edu.uci.ics.pregelix.api.graph.Vertex;
 import edu.uci.ics.pregelix.api.util.BspUtils;
 import edu.uci.ics.pregelix.dataflow.base.IConfigurationFactory;
+import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 
 /**
  * This operator transforms Asterix types read from an Asterix LSMBTree to Pregelix Writables
@@ -188,7 +178,7 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                 }
 
                 // deserialize vertex value
-                v.setVertexValue(transformState(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer
+                v.setVertexValue(PregelixAsterixIntegrationUtil.transformStateFromAsterix(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer
                         .getFieldValues().get(1).getStartOffset() + 1));
 
                 AListPointable edges = (AListPointable) pointer.getFieldValues().get(2);
@@ -211,66 +201,13 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                         edgeValueType = ATypeTag.NULL;
                     }
 
-                    Writable edgeValue = transformState(edgePointer.getFieldValues().get(1).getByteArray(),
+                    Writable edgeValue = PregelixAsterixIntegrationUtil.transformStateFromAsterix(edgePointer.getFieldValues().get(1).getByteArray(),
                             edgeValueType, edgePointer.getFieldValues().get(1).getStartOffset() + 1);
 
                     v.addEdge(destId, edgeValue);
                 }
 
                 return v;
-            }
-
-            /**
-             * @TODO: Move somewhere else
-             * @TODO: Exception handling
-             * @TODO: Implement a pool for the types
-             * @param bytes
-             * @param types
-             */
-            private Writable transformState(byte[] bytes, ATypeTag type, int offset) {
-                switch (type) {
-                    case DOUBLE: {
-                        return new DoubleWritable(ADoubleSerializerDeserializer.getDouble(bytes, offset));
-                    }
-                    case FLOAT: {
-                        return new FloatWritable(AFloatSerializerDeserializer.getFloat(bytes, offset));
-                    }
-                    case BOOLEAN: {
-                        return new BooleanWritable(ABooleanSerializerDeserializer.getBoolean(bytes, offset));
-                    }
-                    case INT32: {
-                        return new IntWritable(AInt32SerializerDeserializer.getInt(bytes, offset));
-                    }
-                    case INT64: {
-                        return new LongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
-                    }
-                    case NULL: {
-                        return NullWritable.get();
-                    }
-                    case STRING:
-                    case INT8:
-                    case INT16:
-                    case CIRCLE:
-                    case DATE:
-                    case DATETIME:
-                    case LINE:
-                    case TIME:
-                    case DURATION:
-                    case YEARMONTHDURATION:
-                    case DAYTIMEDURATION:
-                    case INTERVAL:
-                    case ORDEREDLIST:
-                    case POINT:
-                    case POINT3D:
-                    case RECTANGLE:
-                    case POLYGON:
-                    case RECORD:
-                    case UNORDEREDLIST:
-                    case UUID:
-                    default: {
-                        throw new NotImplementedException("No type transformation implemented for type " + type + " .");
-                    }
-                }
             }
 
             @Override
