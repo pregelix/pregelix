@@ -34,5 +34,10 @@ PREGELIX_PATH=`pwd`
 
 for i in `cat conf/slaves`
 do
-   ssh $i "cd ${PREGELIX_PATH}; bin/stopnc.sh"
+   if [[ $i == *","* ]]; then
+      arrIN=(${i//,/ })
+      ssh ${arrIN[0]} "cd ${PREGELIX_PATH}; bin/stopnc.sh"
+   else
+      ssh $i "cd ${PREGELIX_PATH}; bin/stopnc.sh"
+   fi
 done

@@ -34,5 +34,10 @@ PREGELIX_PATH=`pwd`
 
 for i in `cat conf/slaves`
 do
-   ssh $i "cd ${PREGELIX_PATH}; export JAVA_HOME=${JAVA_HOME}; bin/startnc.sh"
+   if [[ $i == *","* ]]; then
+      arrIN=(${i//,/ })
+      ssh ${arrIN[0]} "cd ${PREGELIX_PATH}; export JAVA_HOME=${JAVA_HOME}; bin/startnc.sh ${arrIN[1]}"
+   else
+      ssh $i "cd ${PREGELIX_PATH}; export JAVA_HOME=${JAVA_HOME}; bin/startnc.sh"
+   fi
 done

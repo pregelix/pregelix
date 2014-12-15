@@ -66,7 +66,11 @@ IPADDR=`bin/getip.sh`
 #echo $IPADDR
 
 #Get node ID
-NODEID=`hostname | cut -d '.' -f 1`
+if [ $# -eq 0 ]; then
+   NODEID=`hostname | cut -d '.' -f 1`
+else
+   NODEID=$1
+fi
 
 PREGELIX_HOME=`pwd`
 
