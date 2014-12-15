@@ -28,6 +28,7 @@ import org.kohsuke.args4j.Option;
 import edu.uci.ics.pregelix.api.job.PregelixJob;
 import edu.uci.ics.pregelix.core.base.IDriver.Plan;
 import edu.uci.ics.pregelix.core.driver.Driver;
+import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 import edu.uci.ics.pregelix.example.PageRankVertex;
 import edu.uci.ics.pregelix.example.ReachabilityVertex;
 import edu.uci.ics.pregelix.example.ShortestPathsVertex;
@@ -97,10 +98,23 @@ public class Client {
         parser.parseArgument(args);
 
         String[] inputs = options.inputPaths.split(";");
-        FileInputFormat.setInputPaths(job, inputs[0]);
-        for (int i = 1; i < inputs.length; i++)
-            FileInputFormat.addInputPaths(job, inputs[i]);
-        FileOutputFormat.setOutputPath(job, new Path(options.outputPath));
+        if (inputs[0].startsWith("asterix:/")) {
+            for (int i = 0; i < inputs.length; i++)
+                PregelixAsterixIntegrationUtil.INPUT_PATHS.add(new Path(inputs[i]));
+        } else {
+            FileInputFormat.setInputPaths(job, inputs[0]);
+            for (int i = 1; i < inputs.length; i++)
+                FileInputFormat.addInputPaths(job, inputs[i]);
+        }
+
+        if (options.outputPath.startsWith("asterix:/")) {
+            String[] outputs = options.outputPath.split(";");
+
+            for (int i = 0; i < outputs.length; i++)
+                PregelixAsterixIntegrationUtil.OUTPUT_PATHS.add(new Path(outputs[i]));
+        } else {
+            FileOutputFormat.setOutputPath(job, new Path(options.outputPath));
+        }
         setJobSpecificSettings(job, options);
         return options;
     }

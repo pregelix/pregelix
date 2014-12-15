@@ -1,6 +1,9 @@
 package edu.uci.ics.pregelix.dataflow.util;
 
+import java.util.ArrayList;
+
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.fs.Path;
 
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ADoubleSerializerDeserializer;
@@ -26,6 +29,9 @@ import edu.uci.ics.pregelix.api.datatypes.VIntWritable;
 import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 
 public class PregelixAsterixIntegrationUtil {
+    
+    public static ArrayList<Path> OUTPUT_PATHS = new ArrayList<Path>();
+    public static ArrayList<Path> INPUT_PATHS = new ArrayList<Path>();
 
     /**
      * @TODO: Move somewhere else
@@ -99,7 +105,7 @@ public class PregelixAsterixIntegrationUtil {
             return new AFloat(((FloatWritable) value).get());
         } 
         else if(value instanceof org.apache.hadoop.io.FloatWritable) {
-            return new ADouble(((org.apache.hadoop.io.FloatWritable) value).get());
+            return new AFloat(((org.apache.hadoop.io.FloatWritable) value).get());
         }
         else if(value instanceof BooleanWritable) {
             if(((BooleanWritable) value).get()) {

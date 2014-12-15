@@ -421,7 +421,7 @@ public abstract class JobGen implements IJobGen {
     public JobSpecification scanIndexWriteGraph() throws HyracksException {
 
         JobSpecification spec;
-        if (FileOutputFormat.getOutputPath(pregelixJob) != null && FileOutputFormat.getOutputPath(pregelixJob).toString().startsWith("asterix:/")) {
+        if (PregelixAsterixIntegrationUtil.OUTPUT_PATHS.size() > 0) {
             spec = scanIndexWriteToAsterix(conf, false);
         } else {
             spec = scanIndexWriteToHDFS(conf, false);
@@ -460,8 +460,7 @@ public abstract class JobGen implements IJobGen {
     @Override
     public JobSpecification generateLoadingJob() throws HyracksException {
         JobSpecification spec;
-        if (FileInputFormat.getInputPaths(pregelixJob).length > 0
-                && FileInputFormat.getInputPaths(pregelixJob)[0].toUri().getScheme().equals("asterix")) {
+        if (PregelixAsterixIntegrationUtil.INPUT_PATHS.size() > 0) {
             spec = loadAsterixData(pregelixJob);
         } else {
             spec = loadHDFSData(pregelixJob);
@@ -649,28 +648,29 @@ public abstract class JobGen implements IJobGen {
             Writable vertexValueWritable = BspUtils.getVertexValueClass(conf).newInstance();
             vertexValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(vertexValueWritable).getType();
         } catch (Exception e1) {
-            throw new HyracksException("Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
-        } 
-        
+            throw new HyracksException(
+                    "Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
+        }
+
         IAType edgeValueType;
         try {
             Writable edgeValueWritable = BspUtils.getEdgeValueClass(conf).newInstance();
             edgeValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(edgeValueWritable).getType();
         } catch (Exception e1) {
-            throw new HyracksException("Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
-        } 
+            throw new HyracksException(
+                    "Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
+        }
 
         // load Pregelix file splits
         IFileSplitProvider fileSplitProvider = getFileSplitProvider(jobId, PRIMARY_INDEX);
 
         // load Asterix file splits
-        IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(FileInputFormat
-                .getInputPaths(job));
+        IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(PregelixAsterixIntegrationUtil.INPUT_PATHS);
 
         // create array of NCs
-        String[] locations = new String[FileInputFormat.getInputPaths(job).length];
+        String[] locations = new String[PregelixAsterixIntegrationUtil.INPUT_PATHS.size()];
         int i = 0;
-        for (Path p : FileInputFormat.getInputPaths(job)) {
+        for (Path p : PregelixAsterixIntegrationUtil.INPUT_PATHS) {
             locations[i++] = p.toUri().getHost();
         }
 
@@ -692,13 +692,11 @@ public abstract class JobGen implements IJobGen {
 
         IAType[] fieldTypesEdges = new IAType[2];
         fieldTypesEdges[0] = BuiltinType.AINT64;
-        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }),
-                "value");
+        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }), "value");
 
         IAType[] fieldTypesNodes = new IAType[3];
         fieldTypesNodes[0] = BuiltinType.AINT64;
-        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }),
-                "value");
+        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }), "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
                     "value" }, fieldTypesEdges, true), "EdgeType");
@@ -827,9 +825,9 @@ public abstract class JobGen implements IJobGen {
         return spec;
     }
 
-    private IFileSplitProvider createFileSplitProviderForAsterix(Path[] inputs) {
+    private IFileSplitProvider createFileSplitProviderForAsterix(List<Path> inputs) {
 
-        FileSplit[] splits = new FileSplit[inputs.length];
+        FileSplit[] splits = new FileSplit[inputs.size()];
 
         int i = 0;
         for (Path p : inputs) {
@@ -924,45 +922,43 @@ public abstract class JobGen implements IJobGen {
     @SuppressWarnings({ "rawtypes" })
     private JobSpecification scanIndexWriteToAsterix(Configuration conf, boolean ckpointing)
             throws HyracksDataException, HyracksException {
-        
+
+        LOGGER.info("asterix write");
+
         // load vertex information
         Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
         Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
         JobSpecification spec = new JobSpecification(frameSize);
-        
+
         IAType vertexValueType;
         try {
             Writable vertexValueWritable = BspUtils.getVertexValueClass(conf).newInstance();
             vertexValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(vertexValueWritable).getType();
         } catch (Exception e1) {
-            throw new HyracksException("Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
-        } 
-        
+            throw new HyracksException(
+                    "Error reading vertexValueType for type transformation. Has your Writable a default constructor?");
+        }
+
         IAType edgeValueType;
         try {
             Writable edgeValueWritable = BspUtils.getEdgeValueClass(conf).newInstance();
             edgeValueType = PregelixAsterixIntegrationUtil.transformStateToAsterix(edgeValueWritable).getType();
         } catch (Exception e1) {
-            throw new HyracksException("Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
-        } 
+            throw new HyracksException(
+                    "Error reading edgeValueType for type transformation. Has your Writable a default constructor?");
+        }
 
         IConfigurationFactory confFactory = new ConfigurationFactory(conf);
         RecordDescriptor recordDescriptor = DataflowUtils.getRecordDescriptorFromKeyValueClasses(conf,
                 vertexIdClass.getName(), vertexClass.getName());
 
         // Construct paths and FileSplitProvider
-        String[] pathStrings = FileOutputFormat.getOutputPath(pregelixJob).toString().split(",");
-        Path[] paths = new Path[pathStrings.length];
-        int i = 0;
-        for (String p : pathStrings) {
-            paths[i++] = new Path(p);
-        }
-        IFileSplitProvider fileSplitProviderAsterix = createFileSplitProviderForAsterix(paths);
+        IFileSplitProvider fileSplitProviderAsterix = createFileSplitProviderForAsterix(PregelixAsterixIntegrationUtil.OUTPUT_PATHS);
 
         // create array of NCs
-        String[] locations = new String[paths.length];
-        i = 0;
-        for (Path p : paths) {
+        String[] locations = new String[PregelixAsterixIntegrationUtil.OUTPUT_PATHS.size()];
+        int i = 0;
+        for (Path p : PregelixAsterixIntegrationUtil.OUTPUT_PATHS) {
             locations[i++] = p.toUri().getHost();
         }
 
@@ -1019,13 +1015,11 @@ public abstract class JobGen implements IJobGen {
 
         IAType[] fieldTypesEdges = new IAType[2];
         fieldTypesEdges[0] = BuiltinType.AINT64;
-        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }),
-                "value");
+        fieldTypesEdges[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, edgeValueType }), "value");
 
         IAType[] fieldTypesNodes = new IAType[3];
         fieldTypesNodes[0] = BuiltinType.AINT64;
-        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }),
-                "value");
+        fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }), "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
                     "value" }, fieldTypesEdges, true), "EdgeType");
@@ -1086,15 +1080,6 @@ public abstract class JobGen implements IJobGen {
 
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, locations);
 
-        int[] treeFields = new int[] { 0 };
-
-        BTreeSearchOperatorDescriptor btreeSearchOp = new BTreeSearchOperatorDescriptor(spec, recordDescriptorAsterix,
-                storageManagerInterface, lcManagerProvider, fileSplitProviderAsterix, typeTraitsAsterix,
-                comparatorFactories, treeFields, null, null, true, true, asterixDataflowHelperFactory, false, false,
-                null, NoOpOperationCallbackFactory.INSTANCE, null, null);
-
-        PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, btreeSearchOp, locations);
-
         /*
         * construct empty sink operator
         */
@@ -1121,8 +1106,8 @@ public abstract class JobGen implements IJobGen {
             spec.connect(new OneToOneConnectorDescriptor(spec), formatTransformer, 0, writer, 0);
         }
 
-        spec.connect(new OneToOneConnectorDescriptor(spec), writer, 0, btreeSearchOp, 0);
-        spec.connect(new OneToOneConnectorDescriptor(spec), btreeSearchOp, 0, sink, 0);
+        //spec.connect(new OneToOneConnectorDescriptor(spec), writer, 0, btreeSearchOp, 0);
+        spec.connect(new OneToOneConnectorDescriptor(spec), writer, 0, sink, 0);
         spec.setFrameSize(frameSize);
         return spec;
     }

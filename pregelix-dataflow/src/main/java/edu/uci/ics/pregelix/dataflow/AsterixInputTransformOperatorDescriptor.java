@@ -192,8 +192,8 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                             edgePointer.getFieldValues().get(0).getStartOffset() + 1));
 
                     // type of the edge value
-                    ATypeTag edgeValueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(pointer
-                            .getFieldTypeTags().get(1).getByteArray()[pointer.getFieldTypeTags().get(1)
+                    ATypeTag edgeValueType = EnumDeserializer.ATYPETAGDESERIALIZER.deserialize(edgePointer
+                            .getFieldTypeTags().get(1).getByteArray()[edgePointer.getFieldTypeTags().get(1)
                             .getStartOffset()]);
 
                     // @TODO: Look for a better way to handle this hack
