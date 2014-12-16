@@ -55,7 +55,53 @@ public class PregelixAsterixIntegrationUtil {
                 return new IntWritable(AInt32SerializerDeserializer.getInt(bytes, offset));
             }
             case INT64: {
-                return new LongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
+                return new VLongWritable(AInt64SerializerDeserializer.getLong(bytes, offset));
+            }
+            case NULL: {
+                return NullWritable.get();
+            }
+            case STRING:
+            case INT8:
+            case INT16:
+            case CIRCLE:
+            case DATE:
+            case DATETIME:
+            case LINE:
+            case TIME:
+            case DURATION:
+            case YEARMONTHDURATION:
+            case DAYTIMEDURATION:
+            case INTERVAL:
+            case ORDEREDLIST:
+            case POINT:
+            case POINT3D:
+            case RECTANGLE:
+            case POLYGON:
+            case RECORD:
+            case UNORDEREDLIST:
+            case UUID:
+            default: {
+                throw new NotImplementedException("No type transformation implemented for type " + type + " .");
+            }
+        }
+    }
+    
+    public static Writable transformStateFromAsterixDefaults(ATypeTag type) {
+        switch (type) {
+            case DOUBLE: {
+                return new DoubleWritable(0.0);
+            }
+            case FLOAT: {
+                return new FloatWritable(0.0f);
+            }
+            case BOOLEAN: {
+                return new BooleanWritable(false);
+            }
+            case INT32: {
+                return new IntWritable(0);
+            }
+            case INT64: {
+                return new VLongWritable(0l);
             }
             case NULL: {
                 return NullWritable.get();

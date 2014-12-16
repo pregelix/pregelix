@@ -173,20 +173,24 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                         .get(1).getByteArray()[pointer.getFieldTypeTags().get(1).getStartOffset()]);
 
                 // @TODO: Look for a better way to handle this hack
-                if (pointer.getFieldValues().get(1).getLength() <= 1) {
-                    valueType = ATypeTag.NULL;
-                }
+                //if (pointer.getFieldValues().get(1).getLength() <= 1) {
+                //    valueType = ATypeTag.NULL;
+                //}
 
                 // deserialize vertex value
-                v.setVertexValue(PregelixAsterixIntegrationUtil.transformStateFromAsterix(pointer.getFieldValues().get(1).getByteArray(), valueType, pointer
-                        .getFieldValues().get(1).getStartOffset() + 1));
+                try {
+                    v.setVertexValue(PregelixAsterixIntegrationUtil.transformStateFromAsterix(pointer.getFieldValues()
+                            .get(1).getByteArray(), valueType, pointer.getFieldValues().get(1).getStartOffset() + 1));
+                } catch (Exception e) {
+                    v.setVertexValue(PregelixAsterixIntegrationUtil.transformStateFromAsterixDefaults(valueType));
+                }
 
                 AListPointable edges = (AListPointable) pointer.getFieldValues().get(2);
                 for (IVisitablePointable edge : edges.getItems()) {
-                    
+
                     // TODO: pool
                     VLongWritable destId = new VLongWritable();
-                    
+
                     ARecordPointable edgePointer = (ARecordPointable) edge;
                     destId.set(AInt64SerializerDeserializer.getLong(edgePointer.getFieldValues().get(0).getByteArray(),
                             edgePointer.getFieldValues().get(0).getStartOffset() + 1));
@@ -197,12 +201,13 @@ public class AsterixInputTransformOperatorDescriptor extends AbstractSingleActiv
                             .getStartOffset()]);
 
                     // @TODO: Look for a better way to handle this hack
-                    if (edgePointer.getFieldValues().get(1).getLength() <= 1) {
-                        edgeValueType = ATypeTag.NULL;
-                    }
+                    //if (edgePointer.getFieldValues().get(1).getLength() <= 1) {
+                    //    edgeValueType = ATypeTag.NULL;
+                    //}
 
-                    Writable edgeValue = PregelixAsterixIntegrationUtil.transformStateFromAsterix(edgePointer.getFieldValues().get(1).getByteArray(),
-                            edgeValueType, edgePointer.getFieldValues().get(1).getStartOffset() + 1);
+                    Writable edgeValue = PregelixAsterixIntegrationUtil.transformStateFromAsterix(edgePointer
+                            .getFieldValues().get(1).getByteArray(), edgeValueType, edgePointer.getFieldValues().get(1)
+                            .getStartOffset() + 1);
 
                     v.addEdge(destId, edgeValue);
                 }

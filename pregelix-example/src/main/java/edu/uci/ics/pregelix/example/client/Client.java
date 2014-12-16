@@ -97,7 +97,7 @@ public class Client {
         CmdLineParser parser = new CmdLineParser(options);
         parser.parseArgument(args);
 
-        String[] inputs = options.inputPaths.split(";");
+        String[] inputs = options.inputPaths.split(",");
         if (inputs[0].startsWith("asterix:/")) {
             for (int i = 0; i < inputs.length; i++)
                 PregelixAsterixIntegrationUtil.INPUT_PATHS.add(new Path(inputs[i]));
@@ -108,7 +108,7 @@ public class Client {
         }
 
         if (options.outputPath.startsWith("asterix:/")) {
-            String[] outputs = options.outputPath.split(";");
+            String[] outputs = options.outputPath.split(",");
 
             for (int i = 0; i < outputs.length; i++)
                 PregelixAsterixIntegrationUtil.OUTPUT_PATHS.add(new Path(outputs[i]));
