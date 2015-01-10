@@ -19,10 +19,10 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.junit.Test;
 
 import edu.uci.ics.hyracks.api.job.JobSpecification;
@@ -32,6 +32,7 @@ import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.optimizer.IOptimizer;
 import edu.uci.ics.pregelix.core.optimizer.NoOpOptimizer;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
+import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 import edu.uci.ics.pregelix.example.ConnectedComponentsVertex;
 import edu.uci.ics.pregelix.example.ConnectedComponentsVertex.SimpleConnectedComponentsVertexOutputFormat;
 import edu.uci.ics.pregelix.example.inputformat.TextConnectedComponentsInputFormat;
@@ -52,7 +53,7 @@ public class AsterixDataLoadTest {
     private static final String JOB_NAME = "AsterixDataLoadTest";
     
     private static final String ASTERIX_INPUT_INDEX_PATH = "asterix://nc1"+(new File("src/test/resources/asterixLoading/nc1data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath())
-            +";asterix://nc2"+(new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
+            +",asterix://nc2"+(new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
 
     private JobGenOuterJoin giraphTestJobGen;
     private PregelixJob job;
@@ -82,10 +83,10 @@ public class AsterixDataLoadTest {
         IOptimizer dynamicOptimizer = new NoOpOptimizer();
         giraphTestJobGen = new JobGenOuterJoin(job, dynamicOptimizer);
         
-        String[] inputs = ASTERIX_INPUT_INDEX_PATH.split(";");
-        FileInputFormat.setInputPaths(job, inputs[0]);
-        for (int i = 1; i < inputs.length; i++)
-            FileInputFormat.addInputPaths(job, inputs[i]);
+        PregelixAsterixIntegrationUtil.INPUT_PATHS.clear();
+        String[] inputs = ASTERIX_INPUT_INDEX_PATH.split(",");
+        for (int i = 0; i < inputs.length; i++)
+            PregelixAsterixIntegrationUtil.INPUT_PATHS.add(new Path(inputs[i]));
     }
 
     private void cleanupStores() throws IOException {
@@ -102,21 +103,6 @@ public class AsterixDataLoadTest {
 
     
     @Test
-    public void testDifferentPartitioning() throws Exception {
-        setUp(PATH_TO_CLUSTER_STORE);
-        runCreation();
-        runDataLoad();
-        runIndexScan();
-        try {
-            compareResults();
-        } catch (Exception e) {
-            tearDown();
-            throw e;
-        }
-        tearDown();
-    }
-    
-    @Test
     public void testSamePartitioning() throws Exception {
         setUp(PATH_TO_CLUSTER_STORE_SINGLE);
         runCreation();
@@ -131,13 +117,12 @@ public class AsterixDataLoadTest {
         tearDown();
     }
     
-    /*
     @Test
-    public void testWrite() throws Exception {
-        setUp(PATH_TO_CLUSTER_STORE_SINGLE);  
+    public void testDifferentPartitioning() throws Exception {
+        setUp(PATH_TO_CLUSTER_STORE);
         runCreation();
         runDataLoad();
-        runWrite();
+        runIndexScan();
         try {
             compareResults();
         } catch (Exception e) {
@@ -146,8 +131,6 @@ public class AsterixDataLoadTest {
         }
         tearDown();
     }
-    */
-    
 
     private void runCreation() throws Exception {
         try {
@@ -176,19 +159,6 @@ public class AsterixDataLoadTest {
             throw e;
         }
     }
-    
-    /*
-    private void runWrite() throws Exception {
-        try {
-            FileOutputFormat.setOutputPath(job, new Path("asterix://nc1"+(new File("actual/").getAbsolutePath())));
-            
-            JobSpecification scanWriteJobSpec = giraphTestJobGen.scanIndexWriteGraph();
-            PregelixHyracksIntegrationUtil.runJob(scanWriteJobSpec, HYRACKS_APP_NAME);
-        } catch (Exception e) {
-            throw e;
-        }
-    }
-    */
 
     private void compareResults() throws Exception {
         PregelixJob job = new PregelixJob(JOB_NAME);
