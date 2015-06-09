@@ -16,7 +16,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>edu.uci.ics.hyracks</groupId>
   <artifactId>pregelix</artifactId>
-  <version>0.2.14-SNAPSHOT</version>
+  <version>0.2.16-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>pregelix</name>
 
@@ -26,9 +26,9 @@
     <global.test.includes>**/*TestSuite.java,**/*Test.java</global.test.includes>
     <global.test.excludes>**/Abstract*.java,${hanging.pregelix.tests},${hivesterix.perf.tests}</global.test.excludes>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding> 
-    <hyracks.version>0.2.13</hyracks.version>
-    <pregelix.version>0.2.14-SNAPSHOT</pregelix.version>
-    <asterix.version>0.8.6</asterix.version>
+    <hyracks.version>0.2.16-SNAPSHOT</hyracks.version>
+    <pregelix.version>0.2.16-SNAPSHOT</pregelix.version>
+    <asterix.version>0.8.7-SNAPSHOT</asterix.version>
     <junit.version>4.8.1</junit.version>
     <commons.io.version>2.4</commons.io.version>
  </properties>

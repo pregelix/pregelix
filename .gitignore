@@ -13,3 +13,4 @@ edu.uci.ics.hyracks.control.nc.NodeControllerService
 expected
 teststore*
 *pregelix-example/dev*
+pregelix-example/storage/

@@ -216,7 +216,7 @@ public class JoinTest {
         IConnectorDescriptor joinWriterConn = new MToNPartitioningMergingConnectorDescriptor(spec,
                 new FieldHashPartitionComputerFactory(new int[] { 1 },
                         new IBinaryHashFunctionFactory[] { stringHashFactory }), sortFields, comparatorFactories,
-                nmkFactory);
+                        nmkFactory);
         spec.connect(joinWriterConn, sorter, 0, writer, 0);
 
         spec.addRoot(writer);
@@ -239,7 +239,7 @@ public class JoinTest {
         }
         TreeIndexCreateOperatorDescriptor writer = new TreeIndexCreateOperatorDescriptor(spec, storageManagerInterface,
                 lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories, null,
-                new BTreeDataflowHelperFactory(), new TransientLocalResourceFactoryProvider(),
+                new BTreeDataflowHelperFactory(false), new TransientLocalResourceFactoryProvider(),
                 NoOpOperationCallbackFactory.INSTANCE);
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, NC1_ID, NC2_ID);
         spec.addRoot(writer);
@@ -286,7 +286,8 @@ public class JoinTest {
         }
         TreeIndexBulkLoadOperatorDescriptor writer = new TreeIndexBulkLoadOperatorDescriptor(spec, custDesc,
                 storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, comparatorFactories, null,
-                fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, false, 100000, false, new BTreeDataflowHelperFactory());
+                fieldPermutation, DEFAULT_BTREE_FILL_FACTOR, false, 100000, false,
+                new BTreeDataflowHelperFactory(false));
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, NC1_ID, NC2_ID);
 
         EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
@@ -365,7 +366,7 @@ public class JoinTest {
         }
         IndexNestedLoopJoinOperatorDescriptor join = new IndexNestedLoopJoinOperatorDescriptor(spec, custOrderJoinDesc,
                 storageManagerInterface, lcManagerProvider, fileSplitProvider, typeTraits, keyComparatorFactories,
-                true, keyFields, keyFields, true, true, new BTreeDataflowHelperFactory());
+                true, keyFields, keyFields, true, true, new BTreeDataflowHelperFactory(false));
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, join, NC1_ID, NC2_ID);
 
         /** results (already in sorted order) */
@@ -490,7 +491,7 @@ public class JoinTest {
         IConnectorDescriptor joinWriterConn = new MToNPartitioningMergingConnectorDescriptor(spec,
                 new FieldHashPartitionComputerFactory(new int[] { 9 },
                         new IBinaryHashFunctionFactory[] { stringHashFactory }), sortFields, comparatorFactories,
-                nmkFactory);
+                        nmkFactory);
         spec.connect(joinWriterConn, sorter, 0, writer, 0);
 
         spec.addRoot(writer);
@@ -571,7 +572,7 @@ public class JoinTest {
         IndexNestedLoopJoinOperatorDescriptor join = new IndexNestedLoopJoinOperatorDescriptor(spec, custOrderJoinDesc,
                 storageManagerInterface, lcManagerProvider, fileSplitProvider, interiorFrameFactory, leafFrameFactory,
                 typeTraits, keyComparatorFactories, true, keyFields, keyFields, true, true,
-                new BTreeDataflowHelperFactory(), true, nullWriterFactories);
+                new BTreeDataflowHelperFactory(false), true, nullWriterFactories);
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, join, NC1_ID, NC2_ID);
 
         /** results (already in sorted order) */
@@ -588,7 +589,7 @@ public class JoinTest {
         spec.connect(new MToNPartitioningMergingConnectorDescriptor(spec, new FieldHashPartitionComputerFactory(
                 keyFields, new IBinaryHashFunctionFactory[] { new PointableBinaryHashFunctionFactory(
                         UTF8StringPointable.FACTORY) }), sortFields, comparatorFactories, nmkFactory), sorter, 0, join,
-                0);
+                        0);
 
         IBinaryComparatorFactory[] mergeComparatorFactories = new IBinaryComparatorFactory[2];
         mergeComparatorFactories[0] = new PointableBinaryComparatorFactory(UTF8StringPointable.FACTORY);
@@ -597,7 +598,7 @@ public class JoinTest {
         spec.connect(new MToNPartitioningMergingConnectorDescriptor(spec, new FieldHashPartitionComputerFactory(
                 new int[] { 9 }, new IBinaryHashFunctionFactory[] { new PointableBinaryHashFunctionFactory(
                         UTF8StringPointable.FACTORY) }), mergeFields, comparatorFactories, nmkFactory), join, 0,
-                writer, 0);
+                        writer, 0);
 
         spec.addRoot(writer);
         runTest(spec);

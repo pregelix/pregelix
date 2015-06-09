@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import edu.uci.ics.pregelix.api.util.GlobalEdgeCountAggregator;
 import edu.uci.ics.pregelix.api.util.GlobalVertexCountAggregator;
 import edu.uci.ics.pregelix.api.util.HadoopCountersAggregator;
 import edu.uci.ics.pregelix.api.util.HadoopCountersGlobalAggregateHook;
+import edu.uci.ics.pregelix.fs.AsterixFileSystem;
 
 /**
  * This class represents a Pregelix job.
@@ -88,13 +89,15 @@ public class PregelixJob extends Job {
     public static final String DYNAMIC_OPTIMIZATION = "pregelix.dynamicopt";
     /** the iteration complete reporter hook */
     public static final String ITERATION_COMPLETE_CLASS = "pregelix.iterationCompleteReporter";
+    /** the input is asterix format */
+    public static final String ASTERIX_INPUT = "pregelix.asterix.input";
     /** comma */
     public static final String COMMA_STR = ",";
     /** period */
     public static final String PERIOD_STR = ".";
     /** the names of the aggregator classes active for all vertex types */
     public static final String[] DEFAULT_GLOBAL_AGGREGATOR_CLASSES = { GlobalVertexCountAggregator.class.getName(),
-            GlobalEdgeCountAggregator.class.getName() };
+        GlobalEdgeCountAggregator.class.getName() };
     /** The name of an optional class that aggregates all Vertexes into mapreduce.Counters */
     public static final String COUNTERS_AGGREGATOR_CLASS = "pregelix.aggregatedCountersClass";
     /** the group-by algorithm */
@@ -110,11 +113,11 @@ public class PregelixJob extends Job {
     /** the merge connector */
     public static final String MERGE_CONNECTOR = "pregelix.merge";
     /** the maximum allowed iteration */
-    public static final String MAX_ITERATION="pregelix.maxiteration";
+    public static final String MAX_ITERATION = "pregelix.maxiteration";
 
     /**
      * Construct a Pregelix job from an existing configuration
-     * 
+     *
      * @param conf
      * @throws IOException
      */
@@ -124,18 +127,19 @@ public class PregelixJob extends Job {
 
     /**
      * Constructor that will instantiate the configuration
-     * 
+     *
      * @param jobName
      *            User-defined job name
      * @throws IOException
      */
     public PregelixJob(String jobName) throws IOException {
         super(new Configuration(), jobName);
+        conf.setClass("fs.asterix.impl", AsterixFileSystem.class, org.apache.hadoop.fs.FileSystem.class);
     }
 
     /**
      * Constructor.
-     * 
+     *
      * @param conf
      *            User-defined configuration
      * @param jobName
@@ -144,11 +148,12 @@ public class PregelixJob extends Job {
      */
     public PregelixJob(Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
+        conf.setClass("fs.asterix.impl", AsterixFileSystem.class, org.apache.hadoop.fs.FileSystem.class);
     }
 
     /**
      * Set the vertex class (required)
-     * 
+     *
      * @param vertexClass
      *            Runs vertex computation
      */
@@ -158,7 +163,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the vertex input format class (required)
-     * 
+     *
      * @param vertexInputFormatClass
      *            Determines how graph is input
      */
@@ -168,7 +173,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the vertex output format class (optional)
-     * 
+     *
      * @param vertexOutputFormatClass
      *            Determines how graph is output
      */
@@ -178,7 +183,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the vertex combiner class (optional)
-     * 
+     *
      * @param vertexCombinerClass
      *            Determines how vertex messages are combined
      */
@@ -188,7 +193,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the global aggregator class (optional)
-     * 
+     *
      * @param globalAggregatorClass
      *            Determines how messages are globally aggregated
      */
@@ -207,7 +212,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set whether the vertex state length can be dynamically increased
-     * 
+     *
      * @param jobId
      */
     final public void setDynamicVertexValueSize(boolean incStateLengthDynamically) {
@@ -216,7 +221,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set whether the vertex state length is fixed
-     * 
+     *
      * @param jobId
      */
     final public void setFixedVertexValueSize(boolean fixedSize) {
@@ -225,7 +230,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the frame size for a job
-     * 
+     *
      * @param frameSize
      *            the desired frame size
      */
@@ -235,7 +240,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the normalized key computer class
-     * 
+     *
      * @param nkcClass
      */
     final public void setNoramlizedKeyComputerClass(Class<?> nkcClass) {
@@ -244,7 +249,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the vertex partitioner class
-     * 
+     *
      * @param partitionerClass
      */
     final public void setVertexPartitionerClass(Class<?> partitionerClass) {
@@ -253,7 +258,7 @@ public class PregelixJob extends Job {
 
     /**
      * Indicate if the job needs to do a lot of graph mutations or variable size updates
-     * 
+     *
      * @param updateHeavyFlag
      */
     final public void setLSMStorage(boolean variableSizedUpdateHeavyFlag) {
@@ -262,7 +267,7 @@ public class PregelixJob extends Job {
 
     /**
      * Users can provide an ICheckpointHook implementation to specify when to do checkpoint
-     * 
+     *
      * @param ckpClass
      */
     final public void setCheckpointHook(Class<?> ckpClass) {
@@ -271,7 +276,7 @@ public class PregelixJob extends Job {
 
     /**
      * Users can provide an ICheckpointHook implementation to specify when to do checkpoint
-     * 
+     *
      * @param ckpClass
      */
     final public void setRecoveryCount(int recoveryCount) {
@@ -280,7 +285,7 @@ public class PregelixJob extends Job {
 
     /**
      * Users can set the interval of checkpointing
-     * 
+     *
      * @param ckpInterval
      */
     final public void setCheckpointingInterval(int ckpInterval) {
@@ -290,7 +295,7 @@ public class PregelixJob extends Job {
     /**
      * Users can provide an IIterationCompleteReporterHook implementation to perform actions
      * at the end of each iteration
-     * 
+     *
      * @param reporterClass
      */
     final public void setIterationCompleteReporterHook(Class<? extends IIterationCompleteReporterHook> reporterClass) {
@@ -299,7 +304,7 @@ public class PregelixJob extends Job {
 
     /**
      * Indicate if dynamic optimization is enabled
-     * 
+     *
      * @param dynamicOpt
      */
     final public void setEnableDynamicOptimization(boolean dynamicOpt) {
@@ -308,7 +313,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the counter aggregator class
-     * 
+     *
      * @param aggClass
      */
     final public void setCounterAggregatorClass(Class<? extends HadoopCountersAggregator<?, ?, ?, ?, ?>> aggClass) {
@@ -323,7 +328,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the group-by algorithm: sort-true or hash-false
-     * 
+     *
      * @param sortOrHash
      */
     final public void setGroupByAlgorithm(boolean sortOrHash) {
@@ -332,7 +337,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the memory buget for group-by operators (only hash-based)
-     * 
+     *
      * @param numberOfPages
      */
     final public void setGroupByMemoryLimit(int numberOfPages) {
@@ -341,7 +346,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the memory buget for sort operators (only hash-based)
-     * 
+     *
      * @param numberOfPages
      */
     final public void setSortMemoryLimit(int numberOfPages) {
@@ -350,7 +355,7 @@ public class PregelixJob extends Job {
 
     /**
      * Set the number of workers
-     * 
+     *
      * @param numWorkers
      */
     final public void setNumWorkers(int numWorkers) {
@@ -361,30 +366,44 @@ public class PregelixJob extends Job {
      * Whether an application allows to skip the combiner key during message combination,
      * this is a performance improvement tip.
      * By default, the key is not skipped
-     * 
+     *
      * @param skip
      *            true to skip; otherwise, not.
      */
     final public void setSkipCombinerKey(boolean skip) {
         getConfiguration().setBoolean(SKIP_COMBINER_KEY, skip);
     }
-    
+
     /**
      * Whether to use merge connector
-     * 
+     *
      * @param merge
      */
-    final public void setMergeConnector(boolean merge){
+    final public void setMergeConnector(boolean merge) {
         getConfiguration().setBoolean(MERGE_CONNECTOR, merge);
     }
-    
+
     /***
      * Set the maximum allowed iteration
-     * 
+     *
      * @param iteration
      */
-    final public void setMaxIteration(int iteration){
+    final public void setMaxIteration(int iteration) {
         getConfiguration().setInt(MAX_ITERATION, iteration);
+    }
+
+    /***
+     * Set asterix input format
+     */
+    final public void setAsterixFormat(boolean asterixFormat) {
+        getConfiguration().setBoolean(ASTERIX_INPUT, asterixFormat);
+    }
+
+    /**
+     * Whether the job read an asterix dataset
+     */
+    final public boolean isAsterixFormat() {
+        return getConfiguration().getBoolean(ASTERIX_INPUT, false);
     }
 
     @Override
