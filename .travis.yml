@@ -13,6 +13,13 @@ jdk:
 # Use this to prepare the system to install prerequisites or dependencies
 #  - sudo apt-get update
 #before_install: 
+  - git clone https://github.com/apache/incubator-asterixdb.git
+  - git clone https://github.com/apache/incubator-asterixdb-hyracks.git
+  - cd hyracks/
+  - mvn install -DskipTests
+  - cd ../asterixdb/
+  - mvn install -DskipTests
+  - cd ../
 
 # Use this to install any prerequisites or dependencies necessary to run your build
 install:
