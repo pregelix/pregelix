@@ -24,7 +24,7 @@ install:
 # Use this to prepare your build for testing
 # e.g. copy database configurations, environment variables, etc.
 before_script:
-  - mvn clean; mvn install -DskipTests=true
+  - mvn clean package -DskipTests=true
 
 script:
   - mvn test
