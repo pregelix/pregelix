@@ -81,7 +81,7 @@
                 <failIfNoTests>false</failIfNoTests>
                 <forkCount>1</forkCount>
                 <reuseForks>false</reuseForks>
-                <argLine>-enableassertions -Xmx2047m
+                <argLine>-enableassertions -Xmx1024m
                 -Dfile.encoding=UTF-8
                 -Djava.util.logging.config.file=${user.home}/logging.properties
                 -Xdebug
