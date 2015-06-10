@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -94,16 +94,13 @@ public class RunJobTestCase extends TestCase {
     @Test
     public void test() throws Exception {
         setUp();
+        System.out.println("TEST: " + jobFile);
         Plan[] plans = new Plan[] { Plan.OUTER_JOIN, Plan.INNER_JOIN };
         for (Plan plan : plans) {
             job.setMergeConnector(true);
             driver.runJob(job, plan, PregelixHyracksIntegrationUtil.CC_HOST,
                     PregelixHyracksIntegrationUtil.TEST_HYRACKS_CC_CLIENT_PORT, false);
             compareResults();
-            //job.setMergeConnector(false);
-            //driver.runJob(job, plan, PregelixHyracksIntegrationUtil.CC_HOST,
-            //        PregelixHyracksIntegrationUtil.TEST_HYRACKS_CC_CLIENT_PORT, false);
-            //compareResults();
         }
         tearDown();
         waitawhile();
@@ -115,6 +112,7 @@ public class RunJobTestCase extends TestCase {
         TestUtils.compareWithResultDir(new File(expectedFileDir), new File(resultFileDir));
     }
 
+    @Override
     public String toString() {
         return jobFile;
     }
