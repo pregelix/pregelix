@@ -5,9 +5,7 @@ branches:
     - master
 
 jdk:
-  - oraclejdk8
   - oraclejdk7
-  - openjdk7
 
 # Use this to prepare the system to install prerequisites or dependencies
 #  - sudo apt-get update
@@ -26,9 +24,8 @@ install:
 # Use this to prepare your build for testing
 # e.g. copy database configurations, environment variables, etc.
 before_script:
-  - mvn clean package -DskipTests=true
+  - mvn clean install -DskipTests=true
 
 script:
   - mvn test
 
-  
