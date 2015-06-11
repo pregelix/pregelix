@@ -83,6 +83,7 @@
                 <reuseForks>false</reuseForks>
                 <argLine>-enableassertions
                 -Dfile.encoding=UTF-8
+                -Xmx1024m
                 -Djava.util.logging.config.file=${user.home}/logging.properties
                 </argLine>
             <includes>
