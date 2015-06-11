@@ -6,6 +6,8 @@ branches:
 
 jdk:
   - oraclejdk8
+  - oraclejdk7
+  - openjdk7
 
 # Use this to prepare the system to install prerequisites or dependencies
 #  - sudo apt-get update
