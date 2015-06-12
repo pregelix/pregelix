@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,10 +19,10 @@ import java.io.IOException;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.junit.Test;
 
 import edu.uci.ics.hyracks.api.job.JobSpecification;
@@ -32,7 +32,6 @@ import edu.uci.ics.pregelix.core.jobgen.clusterconfig.ClusterConfig;
 import edu.uci.ics.pregelix.core.optimizer.IOptimizer;
 import edu.uci.ics.pregelix.core.optimizer.NoOpOptimizer;
 import edu.uci.ics.pregelix.core.util.PregelixHyracksIntegrationUtil;
-import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 import edu.uci.ics.pregelix.example.ConnectedComponentsVertex;
 import edu.uci.ics.pregelix.example.ConnectedComponentsVertex.SimpleConnectedComponentsVertexOutputFormat;
 import edu.uci.ics.pregelix.example.inputformat.TextConnectedComponentsInputFormat;
@@ -51,9 +50,11 @@ public class AsterixDataLoadTest {
 
     private static final String HYRACKS_APP_NAME = "asterixLoading";
     private static final String JOB_NAME = "AsterixDataLoadTest";
-    
-    private static final String ASTERIX_INPUT_INDEX_PATH = "asterix://nc1"+(new File("src/test/resources/asterixLoading/nc1data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath())
-            +",asterix://nc2"+(new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
+
+    private static final String ASTERIX_INPUT_INDEX_PATHS = "asterix://nc1"
+            + (new File("src/test/resources/asterixLoading/nc1data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath())
+            + ",asterix://nc2"
+            + (new File("src/test/resources/asterixLoading/nc2data/Pregelix/Nodes_idx_Nodes/").getAbsolutePath());
 
     private JobGenOuterJoin giraphTestJobGen;
     private PregelixJob job;
@@ -68,6 +69,7 @@ public class AsterixDataLoadTest {
         job.getConfiguration().setClass(PregelixJob.EDGE_VALUE_CLASS, LongWritable.class, Writable.class);
         job.getConfiguration().setClass(PregelixJob.MESSAGE_VALUE_CLASS, LongWritable.class, Writable.class);
         job.getConfiguration().set(PregelixJob.JOB_ID, "test_job");
+        FileInputFormat.setInputPaths(job, ASTERIX_INPUT_INDEX_PATHS);
     }
 
     public void setUp(String storePath) throws Exception {
@@ -82,11 +84,6 @@ public class AsterixDataLoadTest {
 
         IOptimizer dynamicOptimizer = new NoOpOptimizer();
         giraphTestJobGen = new JobGenOuterJoin(job, dynamicOptimizer);
-        
-        PregelixAsterixIntegrationUtil.INPUT_PATHS.clear();
-        String[] inputs = ASTERIX_INPUT_INDEX_PATH.split(",");
-        for (int i = 0; i < inputs.length; i++)
-            PregelixAsterixIntegrationUtil.INPUT_PATHS.add(new Path(inputs[i]));
     }
 
     private void cleanupStores() throws IOException {
@@ -101,7 +98,6 @@ public class AsterixDataLoadTest {
         LOGGER.info("Hyracks mini-cluster shut down");
     }
 
-    
     @Test
     public void testSamePartitioning() throws Exception {
         setUp(PATH_TO_CLUSTER_STORE_SINGLE);
@@ -116,7 +112,7 @@ public class AsterixDataLoadTest {
         }
         tearDown();
     }
-    
+
     @Test
     public void testDifferentPartitioning() throws Exception {
         setUp(PATH_TO_CLUSTER_STORE);

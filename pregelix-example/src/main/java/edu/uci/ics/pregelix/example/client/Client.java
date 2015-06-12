@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@ import org.kohsuke.args4j.Option;
 import edu.uci.ics.pregelix.api.job.PregelixJob;
 import edu.uci.ics.pregelix.core.base.IDriver.Plan;
 import edu.uci.ics.pregelix.core.driver.Driver;
-import edu.uci.ics.pregelix.dataflow.util.PregelixAsterixIntegrationUtil;
 import edu.uci.ics.pregelix.example.PageRankVertex;
 import edu.uci.ics.pregelix.example.ReachabilityVertex;
 import edu.uci.ics.pregelix.example.ShortestPathsVertex;
@@ -98,23 +97,12 @@ public class Client {
         parser.parseArgument(args);
 
         String[] inputs = options.inputPaths.split(",");
-        if (inputs[0].startsWith("asterix:/")) {
-            for (int i = 0; i < inputs.length; i++)
-                PregelixAsterixIntegrationUtil.INPUT_PATHS.add(new Path(inputs[i]));
-        } else {
-            FileInputFormat.setInputPaths(job, inputs[0]);
-            for (int i = 1; i < inputs.length; i++)
-                FileInputFormat.addInputPaths(job, inputs[i]);
-        }
 
-        if (options.outputPath.startsWith("asterix:/")) {
-            String[] outputs = options.outputPath.split(",");
-
-            for (int i = 0; i < outputs.length; i++)
-                PregelixAsterixIntegrationUtil.OUTPUT_PATHS.add(new Path(outputs[i]));
-        } else {
-            FileOutputFormat.setOutputPath(job, new Path(options.outputPath));
+        FileInputFormat.setInputPaths(job, inputs[0]);
+        for (int i = 1; i < inputs.length; i++) {
+            FileInputFormat.addInputPaths(job, inputs[i]);
         }
+        FileOutputFormat.setOutputPath(job, new Path(options.outputPath));
         setJobSpecificSettings(job, options);
         return options;
     }
@@ -129,8 +117,9 @@ public class Client {
             String[] inputs = options.inputPaths.split(";");
             if (j == 0) {
                 FileInputFormat.setInputPaths(job, inputs[0]);
-                for (int i = 1; i < inputs.length; i++)
+                for (int i = 1; i < inputs.length; i++) {
                     FileInputFormat.addInputPaths(job, inputs[i]);
+                }
             }
             if (j == jobs.size() - 1) {
                 FileOutputFormat.setOutputPath(job, new Path(options.outputPath));
@@ -147,8 +136,9 @@ public class Client {
         job.getConfiguration().setLong(ShortestPathsVertex.SOURCE_ID, options.sourceId);
         job.getConfiguration().setLong(ReachabilityVertex.SOURCE_ID, options.sourceId);
         job.getConfiguration().setLong(ReachabilityVertex.DEST_ID, options.destId);
-        if (options.numIteration > 0)
+        if (options.numIteration > 0) {
             job.getConfiguration().setLong(PageRankVertex.ITERATIONS, options.numIteration);
+        }
         job.setCheckpointingInterval(options.ckpInterval);
 
         /**

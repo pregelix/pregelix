@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * you may obtain a copy of the License from
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -58,10 +58,10 @@ public class ClusterConfig {
     private static Set<String> blackListNodes = new HashSet<String>();
     private static IHyracksClientConnection hcc;
     private static final int DEFAULT_CC_HTTP_PORT = 16001;
-    
+
     /**
      * let tests set config path to be whatever
-     * 
+     *
      * @param propertiesPath
      *            stores properties file path
      */
@@ -75,7 +75,7 @@ public class ClusterConfig {
 
     /**
      * get NC names running on one IP address
-     * 
+     *
      * @param ipAddress
      * @return
      * @throws HyracksDataException
@@ -86,7 +86,7 @@ public class ClusterConfig {
 
     /**
      * get file split provider, for test only
-     * 
+     *
      * @param jobId
      * @return
      * @throws HyracksDataException
@@ -137,7 +137,7 @@ public class ClusterConfig {
 
     /**
      * set location constraint
-     * 
+     *
      * @param spec
      * @param operator
      * @throws HyracksDataException
@@ -179,7 +179,7 @@ public class ClusterConfig {
 
     /**
      * set location constraint
-     * 
+     *
      * @param spec
      * @param operator
      * @throws HyracksDataException
@@ -208,8 +208,7 @@ public class ClusterConfig {
             ipToNcMapping = new HashMap<String, List<String>>();
             int i = 0;
             for (Map.Entry<String, NodeControllerInfo> entry : ncNameToNcInfos.entrySet()) {
-                String ipAddr = InetAddress.getByAddress(entry.getValue().getNetworkAddress().getIpAddress())
-                        .getHostAddress();
+                String ipAddr = entry.getValue().getNetworkAddress().getAddress();
                 List<String> matchedNCs = ipToNcMapping.get(ipAddr);
                 if (matchedNCs == null) {
                     matchedNCs = new ArrayList<String>();
@@ -244,10 +243,10 @@ public class ClusterConfig {
         }
         return locations;
     }
-    
+
     /**
      * set the default location constraint
-     * 
+     *
      * @param spec
      * @param operator
      * @throws HyracksDataException
@@ -276,7 +275,7 @@ public class ClusterConfig {
     public static void addToBlackListNodes(Collection<String> nodes) {
         blackListNodes.addAll(nodes);
     }
-    
+
     public static void clearConnection() {
         hcc = null;
     }

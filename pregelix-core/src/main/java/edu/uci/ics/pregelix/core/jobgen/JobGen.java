@@ -419,9 +419,9 @@ public abstract class JobGen implements IJobGen {
     }
 
     public JobSpecification scanIndexWriteGraph() throws HyracksException {
-
         JobSpecification spec;
-        if (PregelixAsterixIntegrationUtil.OUTPUT_PATHS.size() > 0) {
+        Path[] paths = pregelixJob.getAsterixOutputPaths();
+        if (paths.length > 0) {
             spec = scanIndexWriteToAsterix(conf, false);
         } else {
             spec = scanIndexWriteToHDFS(conf, false);
@@ -460,7 +460,8 @@ public abstract class JobGen implements IJobGen {
     @Override
     public JobSpecification generateLoadingJob() throws HyracksException {
         JobSpecification spec;
-        if (PregelixAsterixIntegrationUtil.INPUT_PATHS.size() > 0) {
+        if (FileInputFormat.getInputPaths(pregelixJob).length > 0
+                && FileInputFormat.getInputPaths(pregelixJob)[0].toUri().getScheme().equals("asterix")) {
             spec = loadAsterixData(pregelixJob);
         } else {
             spec = loadHDFSData(pregelixJob);
@@ -515,7 +516,7 @@ public abstract class JobGen implements IJobGen {
 
     /***
      * drop the sindex
-     * 
+     *
      * @return JobSpecification
      * @throws HyracksException
      */
@@ -550,9 +551,9 @@ public abstract class JobGen implements IJobGen {
                     new ConstantMergePolicyFactory(), MERGE_POLICY_PROPERTIES, NoOpOperationTrackerProvider.INSTANCE,
                     /* TODO verify whether key dup check is required or not in preglix: to be safe, just check it as it has been done*/
                     SynchronousSchedulerProvider.INSTANCE, NoOpIOOperationCallback.INSTANCE, 0.01, true, null, null,
-                    null, null);
+                    null, null, false);
         } else {
-            return new BTreeDataflowHelperFactory();
+            return new BTreeDataflowHelperFactory(false);
         }
     }
 
@@ -665,12 +666,13 @@ public abstract class JobGen implements IJobGen {
         IFileSplitProvider fileSplitProvider = getFileSplitProvider(jobId, PRIMARY_INDEX);
 
         // load Asterix file splits
-        IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(PregelixAsterixIntegrationUtil.INPUT_PATHS);
+        Path[] inputPaths = FileInputFormat.getInputPaths(job);
+        IFileSplitProvider asterixFileSplitProvider = createFileSplitProviderForAsterix(Arrays.asList(inputPaths));
 
         // create array of NCs
-        String[] locations = new String[PregelixAsterixIntegrationUtil.INPUT_PATHS.size()];
+        String[] locations = new String[inputPaths.length];
         int i = 0;
-        for (Path p : PregelixAsterixIntegrationUtil.INPUT_PATHS) {
+        for (Path p : inputPaths) {
             locations[i++] = p.toUri().getHost();
         }
 
@@ -699,7 +701,7 @@ public abstract class JobGen implements IJobGen {
         fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }), "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
-                    "value" }, fieldTypesEdges, true), "EdgeType");
+            "value" }, fieldTypesEdges, true), "EdgeType");
         } catch (AsterixException e) {
             e.printStackTrace();
         }
@@ -720,7 +722,7 @@ public abstract class JobGen implements IJobGen {
         RecordDescriptor recordDescriptorAsterixSmall = new RecordDescriptor(
                 new ISerializerDeserializer[] { AqlSerializerDeserializerProvider.INSTANCE
                         .getNonTaggedSerializerDeserializer(nodeType) },
-                new ITypeTraits[] { new TypeTraits(false) });
+                        new ITypeTraits[] { new TypeTraits(false) });
 
         IBinaryComparatorFactory[] comparatorFactories = new IBinaryComparatorFactory[1];
         comparatorFactories[0] = PointableBinaryComparatorFactory.of(IntegerPointable.FACTORY);
@@ -731,7 +733,7 @@ public abstract class JobGen implements IJobGen {
         IIndexDataflowHelperFactory asterixDataflowHelperFactory = new LSMBTreeDataflowHelperFactory(
                 new VirtualBufferCacheProvider(), new ConstantMergePolicyFactory(), MERGE_POLICY_PROPERTIES,
                 NoOpOperationTrackerProvider.INSTANCE, SynchronousSchedulerProvider.INSTANCE,
-                NoOpIOOperationCallback.INSTANCE, 0.01, true, typeTraitsAsterix, null, null, null);
+                NoOpIOOperationCallback.INSTANCE, 0.01, true, typeTraitsAsterix, null, null, null, false);
 
         /*
          * Fake Start. Used to Simulate the Asterix pipeline entry point and to add the given Asterix Index to the LocalResourceRepository
@@ -844,7 +846,7 @@ public abstract class JobGen implements IJobGen {
 
     @SuppressWarnings({ "rawtypes" })
     private JobSpecification scanIndexWriteToHDFS(Configuration conf, boolean ckpointing) throws HyracksDataException,
-            HyracksException {
+    HyracksException {
         Class<? extends WritableComparable<?>> vertexIdClass = BspUtils.getVertexIndexClass(conf);
         Class<? extends Writable> vertexClass = BspUtils.getVertexClass(conf);
         JobSpecification spec = new JobSpecification(frameSize);
@@ -953,12 +955,13 @@ public abstract class JobGen implements IJobGen {
                 vertexIdClass.getName(), vertexClass.getName());
 
         // Construct paths and FileSplitProvider
-        IFileSplitProvider fileSplitProviderAsterix = createFileSplitProviderForAsterix(PregelixAsterixIntegrationUtil.OUTPUT_PATHS);
+        Path[] paths = pregelixJob.getAsterixOutputPaths();
+        IFileSplitProvider fileSplitProviderAsterix = createFileSplitProviderForAsterix(Arrays.asList(paths));
 
         // create array of NCs
-        String[] locations = new String[PregelixAsterixIntegrationUtil.OUTPUT_PATHS.size()];
+        String[] locations = new String[paths.length];
         int i = 0;
-        for (Path p : PregelixAsterixIntegrationUtil.OUTPUT_PATHS) {
+        for (Path p : paths) {
             locations[i++] = p.toUri().getHost();
         }
 
@@ -1022,7 +1025,7 @@ public abstract class JobGen implements IJobGen {
         fieldTypesNodes[1] = new AUnionType(Arrays.asList(new IAType[] { BuiltinType.ANULL, vertexValueType }), "value");
         try {
             fieldTypesNodes[2] = new AUnorderedListType(new ARecordType("EdgeType", new String[] { "destVertexId",
-                    "value" }, fieldTypesEdges, true), "EdgeType");
+            "value" }, fieldTypesEdges, true), "EdgeType");
         } catch (AsterixException e) {
             e.printStackTrace();
         }
@@ -1071,7 +1074,7 @@ public abstract class JobGen implements IJobGen {
         IIndexDataflowHelperFactory asterixDataflowHelperFactory = new LSMBTreeDataflowHelperFactory(
                 new VirtualBufferCacheProvider(), new ConstantMergePolicyFactory(), MERGE_POLICY_PROPERTIES,
                 NoOpOperationTrackerProvider.INSTANCE, SynchronousSchedulerProvider.INSTANCE,
-                NoOpIOOperationCallback.INSTANCE, 0.01, true, typeTraitsAsterix, null, null, null);
+                NoOpIOOperationCallback.INSTANCE, 0.01, true, typeTraitsAsterix, null, null, null, true);
 
         TreeIndexBulkLoadOperatorDescriptor writer = new TreeIndexBulkLoadOperatorDescriptor(spec,
                 recordDescriptorAsterix, storageManagerInterface, lcManagerProvider, fileSplitProviderAsterix,
@@ -1081,8 +1084,8 @@ public abstract class JobGen implements IJobGen {
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, writer, locations);
 
         /*
-        * construct empty sink operator
-        */
+         * construct empty sink operator
+         */
         EmptySinkOperatorDescriptor sink = new EmptySinkOperatorDescriptor(spec);
         PartitionConstraintHelper.addAbsoluteLocationConstraint(spec, sink, locations);
 
@@ -1262,7 +1265,7 @@ public abstract class JobGen implements IJobGen {
 
     /**
      * Switch the plan to a desired one
-     * 
+     *
      * @param iteration
      *            , the latest completed iteration number
      * @param plan
@@ -1281,7 +1284,7 @@ public abstract class JobGen implements IJobGen {
 
     /**
      * Build a jobspec to bulkload the live vertex btree
-     * 
+     *
      * @param iteration
      * @return the job specification
      * @throws HyracksException
@@ -1346,7 +1349,7 @@ public abstract class JobGen implements IJobGen {
 
     /**
      * set the location constraint for operators
-     * 
+     *
      * @param spec
      * @param operator
      */
@@ -1356,7 +1359,7 @@ public abstract class JobGen implements IJobGen {
 
     /**
      * get the file split provider
-     * 
+     *
      * @param jobId
      * @param indexName
      * @return the IFileSplitProvider instance
@@ -1374,7 +1377,7 @@ public abstract class JobGen implements IJobGen {
 
     /**
      * Generate the pipeline for local grouping
-     * 
+     *
      * @param spec
      *            the JobSpecification
      * @param sortOrHash

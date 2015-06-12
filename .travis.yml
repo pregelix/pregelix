@@ -3,12 +3,9 @@ language: java
 branches:
   only:
     - master
-    - stable
 
 jdk:
-  - oraclejdk8
   - oraclejdk7
-  - openjdk7
 
 # Use this to prepare the system to install prerequisites or dependencies
 #  - sudo apt-get update
@@ -16,20 +13,18 @@ before_install:
   - git clone https://code.google.com/p/asterixdb/
   - git clone https://code.google.com/p/hyracks/
   - cd hyracks/
-  - mvn install -DskipTests > /dev/null
-  - cd ../asterixdb/
-  - mvn install -DskipTests > /dev/null
-  - cd ../
+  - mvn clean install -DskipTests
 
 # Use this to install any prerequisites or dependencies necessary to run your build
 install:
-  - mvn install -DskipTests=true
+  - cd ../asterixdb/
+  - mvn clean install -DskipTests
+  - cd ../
 
 # Use this to prepare your build for testing
 # e.g. copy database configurations, environment variables, etc.
 #before_script:
 
 script:
-  - mvn test
-
+  - mvn clean package -DskipTests=true
 

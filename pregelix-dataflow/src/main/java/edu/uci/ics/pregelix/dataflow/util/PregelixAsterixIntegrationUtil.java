@@ -1,9 +1,6 @@
 package edu.uci.ics.pregelix.dataflow.util;
 
-import java.util.ArrayList;
-
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.fs.Path;
 
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ABooleanSerializerDeserializer;
 import edu.uci.ics.asterix.dataflow.data.nontagged.serde.ADoubleSerializerDeserializer;
@@ -29,9 +26,6 @@ import edu.uci.ics.pregelix.api.datatypes.VIntWritable;
 import edu.uci.ics.pregelix.api.datatypes.VLongWritable;
 
 public class PregelixAsterixIntegrationUtil {
-    
-    public static ArrayList<Path> OUTPUT_PATHS = new ArrayList<Path>();
-    public static ArrayList<Path> INPUT_PATHS = new ArrayList<Path>();
 
     /**
      * @TODO: Move somewhere else
@@ -85,7 +79,7 @@ public class PregelixAsterixIntegrationUtil {
             }
         }
     }
-    
+
     public static Writable transformStateFromAsterixDefaults(ATypeTag type) {
         switch (type) {
             case DOUBLE: {
@@ -131,7 +125,7 @@ public class PregelixAsterixIntegrationUtil {
             }
         }
     }
-    
+
     /**
      * @TODO: Move somewhere else
      * @TODO: Exception handling
@@ -140,68 +134,51 @@ public class PregelixAsterixIntegrationUtil {
      * @param types
      */
     public static IAObject transformStateToAsterix(Writable value) {
-        
-        if(value instanceof DoubleWritable) {
+
+        if (value instanceof DoubleWritable) {
             return new ADouble(((DoubleWritable) value).get());
-        }
-        else if(value instanceof org.apache.hadoop.io.DoubleWritable) {
+        } else if (value instanceof org.apache.hadoop.io.DoubleWritable) {
             return new ADouble(((org.apache.hadoop.io.DoubleWritable) value).get());
-        }
-        else if(value instanceof FloatWritable) {
+        } else if (value instanceof FloatWritable) {
             return new AFloat(((FloatWritable) value).get());
-        } 
-        else if(value instanceof org.apache.hadoop.io.FloatWritable) {
+        } else if (value instanceof org.apache.hadoop.io.FloatWritable) {
             return new AFloat(((org.apache.hadoop.io.FloatWritable) value).get());
-        }
-        else if(value instanceof BooleanWritable) {
-            if(((BooleanWritable) value).get()) {
+        } else if (value instanceof BooleanWritable) {
+            if (((BooleanWritable) value).get()) {
                 return ABoolean.TRUE;
-            }
-            else {
+            } else {
                 return ABoolean.FALSE;
             }
-        }
-        else if(value instanceof org.apache.hadoop.io.BooleanWritable) {
-            if(((org.apache.hadoop.io.BooleanWritable) value).get()) {
+        } else if (value instanceof org.apache.hadoop.io.BooleanWritable) {
+            if (((org.apache.hadoop.io.BooleanWritable) value).get()) {
                 return ABoolean.TRUE;
-            }
-            else {
+            } else {
                 return ABoolean.FALSE;
             }
-        }
-        else if(value instanceof IntWritable) {
+        } else if (value instanceof IntWritable) {
             return new AInt32(((IntWritable) value).get());
-        } 
-        else if(value instanceof VIntWritable) {
+        } else if (value instanceof VIntWritable) {
             return new AInt32(((VIntWritable) value).get());
-        } 
-        else if(value instanceof org.apache.hadoop.io.IntWritable) {
+        } else if (value instanceof org.apache.hadoop.io.IntWritable) {
             return new AInt32(((org.apache.hadoop.io.IntWritable) value).get());
-        } 
-        else if(value instanceof org.apache.hadoop.io.VIntWritable) {
+        } else if (value instanceof org.apache.hadoop.io.VIntWritable) {
             return new AInt32(((org.apache.hadoop.io.VIntWritable) value).get());
-        } 
-        else if(value instanceof LongWritable) {
+        } else if (value instanceof LongWritable) {
             return new AInt64(((LongWritable) value).get());
-        } 
-        else if(value instanceof VLongWritable) {
+        } else if (value instanceof VLongWritable) {
             return new AInt64(((VLongWritable) value).get());
-        } 
-        else if(value instanceof org.apache.hadoop.io.LongWritable) {
+        } else if (value instanceof org.apache.hadoop.io.LongWritable) {
             return new AInt64(((org.apache.hadoop.io.LongWritable) value).get());
-        } 
-        else  if(value instanceof org.apache.hadoop.io.VLongWritable) {
+        } else if (value instanceof org.apache.hadoop.io.VLongWritable) {
             return new AInt64(((org.apache.hadoop.io.VLongWritable) value).get());
-        } 
-        else if(value instanceof NullWritable) {
+        } else if (value instanceof NullWritable) {
             return ANull.NULL;
-        } 
-        else if(value instanceof org.apache.hadoop.io.NullWritable) {
+        } else if (value instanceof org.apache.hadoop.io.NullWritable) {
             return ANull.NULL;
-        } 
-        else {
-            throw new NotImplementedException("No type transformation implemented for writable " + value.getClass().getName() + " .");
+        } else {
+            throw new NotImplementedException("No type transformation implemented for writable "
+                    + value.getClass().getName() + " .");
         }
     }
-    
+
 }
